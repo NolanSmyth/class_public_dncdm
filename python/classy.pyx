@@ -1009,6 +1009,20 @@ cdef class Class:
         self.compute(["thermodynamics"])
         return self.th.rs_d
 
+    def rs_rec(self):
+        self.compute(["thermodynamics"])
+        return self.th.rs_rec
+
+    def rd_rec(self):
+        self.compute(["thermodynamics"])
+        return self.th.rd_rec
+
+    def z_eq(self):
+        return self.ba.z_eq
+
+    def H_eq(self):
+        return self.ba.H_eq
+
     def angular_distance(self, z):
         """
         angular_distance(z)

@@ -63,6 +63,9 @@ cdef extern from "class.h":
         double Omega0_dcdmdr
         double Omega0_scf
         double Omega0_k
+        double a_eq # NB addition
+        double H_eq # NB addition
+        double z_eq # NB addition
         int bt_size
 
     cdef struct thermo:
@@ -78,6 +81,7 @@ cdef extern from "class.h":
         double rs_rec
         double ds_rec
         double da_rec
+        double rd_rec # NB addition
         double z_d
         double tau_d
         double ds_d
