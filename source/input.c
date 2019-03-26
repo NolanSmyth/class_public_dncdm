@@ -228,7 +228,8 @@ int input_init(
    * These two arrays must contain the strings of names to be searched
    *  for and the corresponding new parameter */
   char * const target_namestrings[] = {"100*theta_s","Omega_dcdmdr","omega_dcdmdr",
-                                       "Omega_scf","Omega_ini_dcdm","omega_ini_dcdm","sigma8"};
+                                       "Omega_scf","Omega_ini_dcdm","omega_ini_dcdm","sigma8",
+                                       "omega_ini_dcdm_bg"};
   char * const unknown_namestrings[] = {"h","Omega_ini_dcdm","Omega_ini_dcdm",
                                         "scf_shooting_parameter","Omega_dcdmdr","omega_dcdmdr","A_s"};
   enum computation_stage target_cs[] = {cs_thermodynamics, cs_background, cs_background,

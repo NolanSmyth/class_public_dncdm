@@ -121,6 +121,8 @@ TEST_BACKGROUND = test_background.o
 
 TEST_SIGMA = test_sigma.o
 
+TEST_SPECTRA = test_spectra.o
+
 TEST_HYPERSPHERICAL = test_hyperspherical.o
 
 TEST_STEPHANE = test_stephane.o
@@ -146,6 +148,10 @@ class: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(CLASS)
 
 test_sigma: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(TEST_SIGMA)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o test_sigma $(addprefix build/,$(notdir $^)) -lm
+
+test_spectra: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(TEST_SPECTRA)
+	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o test_spectra $(addprefix build/,$(notdir $^)) -lm
+
 
 test_loops: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(TEST_LOOPS)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o $@ $(addprefix build/,$(notdir $^)) -lm

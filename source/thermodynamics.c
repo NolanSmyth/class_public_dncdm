@@ -497,9 +497,13 @@ int thermodynamics_init(
 
       R = 3./4.*pvecback[pba->index_bg_rho_b]/pvecback[pba->index_bg_rho_g];
 
+//      pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_ddkappa] =
+//                 1./pth->thermodynamics_table[(pth->tt_size-1-index_tau)*pth->th_size+pth->index_th_dkappa]
+//                 *(R*R+4./5.*(1.+R))/(1.+R*R)/6.;
       pth->thermodynamics_table[index_tau*pth->th_size+pth->index_th_ddkappa] =
                  1./pth->thermodynamics_table[(pth->tt_size-1-index_tau)*pth->th_size+pth->index_th_dkappa]
-                 *(R*R+4./5.*(1.+R))/(1.+R*R)/6.;
+                 *(R*R+16./15.*(1.+R))/((1.+R)*(1.+R))/6.;
+
 
     }
 

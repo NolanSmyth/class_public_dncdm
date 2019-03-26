@@ -3036,7 +3036,7 @@ int spectra_pk(
 
       /* part diagonal in initial conditions */
       for (index_ic1 = 0; index_ic1 < psp->ic_size[index_md]; index_ic1++) {
-
+        //printf("index_md = %d\n",index_md);
         index_ic1_ic2 = index_symmetric_matrix(index_ic1,index_ic1,psp->ic_size[index_md]);
 
         source_ic1 = ppt->sources[index_md]
@@ -3049,6 +3049,7 @@ int spectra_pk(
               *exp(primordial_pk[index_ic1_ic2]));
 
         pk_tot += exp(psp->ln_pk[(index_tau * psp->ln_k_size + index_k)* psp->ic_ic_size[index_md] + index_ic1_ic2]);
+        //printf("%g\t%g\t%g\t%g\t%g\n",exp(psp->ln_k[index_k]), source_ic1, exp(primordial_pk[index_ic1_ic2]), 2.*_PI_*_PI_/exp(3.*psp->ln_k[index_k]),pk_tot);
 
         if(pba->has_ncdm){
 
@@ -3327,6 +3328,7 @@ int spectra_sigma(
               psp->ln_k_size*index_num*sizeof(double),
               psp->error_message);
 
+ //printf("# k \t R \t Pk \t W \n");
   for (i=0;i<psp->ln_k_size;i++) {
     k=exp(psp->ln_k[i]);
     if (i == (psp->ln_k_size-1)) k *= 0.9999999; // to prevent rounding error leading to k being bigger than maximum value
@@ -3337,6 +3339,7 @@ int spectra_sigma(
                psp->error_message);
     array_for_sigma[i*index_num+index_k]=k;
     array_for_sigma[i*index_num+index_y]=k*k*pk*W*W;
+    //printf("%g\t%g\t%g\t%g\n", k, R, pk, W);
   }
 
   class_call(array_spline(array_for_sigma,

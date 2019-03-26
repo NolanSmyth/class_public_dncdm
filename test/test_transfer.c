@@ -55,6 +55,11 @@ int main(int argc, char **argv) {
     return _FAILURE_;
   }
 
+  if (spectra_init(&pr,&ba,&pt,&pm,&nl,&tr,&sp) == _FAILURE_) {
+    printf("\n\nError in spectra_init \n=>%s\n",sp.error_message);
+    return _FAILURE_;
+  }
+
   /****** output the transfer functions ******/
 
   printf("Output of transfer functions (l, q, k, nu, Delta)\n");
@@ -132,6 +137,10 @@ int main(int argc, char **argv) {
   }
 
   fclose(output);
+  //sp.spectra_verbose = 1;
+  //spectra_pk(&ba, &pt, &pm, &nl, &sp);
+
+
 
   /****** all calculations done, now free the structures ******/
 
