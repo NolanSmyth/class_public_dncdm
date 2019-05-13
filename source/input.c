@@ -228,8 +228,7 @@ int input_init(
    * These two arrays must contain the strings of names to be searched
    *  for and the corresponding new parameter */
   char * const target_namestrings[] = {"100*theta_s","Omega_dcdmdr","omega_dcdmdr",
-                                       "Omega_scf","Omega_ini_dcdm","omega_ini_dcdm","sigma8",
-                                       "omega_ini_dcdm_bg"};
+                                       "Omega_scf","Omega_ini_dcdm","omega_ini_dcdm","sigma8"};
   char * const unknown_namestrings[] = {"h","Omega_ini_dcdm","Omega_ini_dcdm",
                                         "scf_shooting_parameter","Omega_dcdmdr","omega_dcdmdr","A_s"};
   enum computation_stage target_cs[] = {cs_thermodynamics, cs_background, cs_background,
@@ -799,7 +798,21 @@ int input_read_parameters(
     /* Convert to Mpc */
     pba->Gamma_dcdm *= (1.e3 / _c_);
 
+    /** - Read in flag that determines whether or not we include evolution of DCDM/DR perturbations or just the b/g */
+    class_call(parser_read_string(pfc,"dcdm_bg_only", &string1, &flag1, errmsg), errmsg, errmsg);
+    if (flag1 == _TRUE_){
+      if((strstr(string1,"y") != NULL) || (strstr(string1,"Y") != NULL)){
+        pba->has_dcdm_bg_only = _TRUE_;
+      }
+      else {
+        pba->has_dcdm_bg_only = _FALSE_;
+      }
+      if (input_verbose >0) printf("Read dcdm_bg_only: %s\n", string1);
+    }
+
   }
+
+
 
   /** - non-cold relics (ncdm) */
   class_read_int("N_ncdm",N_ncdm);
@@ -2955,6 +2968,7 @@ int input_default_params(
   pba->Omega0_dcdmdr = 0.0;
   pba->Omega0_dcdm = 0.0;
   pba->Gamma_dcdm = 0.0;
+  pba->has_dcdm_bg_only = _FALSE_;
   pba->N_ncdm = 0;
   pba->Omega0_ncdm_tot = 0.;
   pba->ksi_ncdm_default = 0.;
