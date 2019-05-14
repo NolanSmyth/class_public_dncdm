@@ -81,6 +81,7 @@ struct background
   double Omega0_dcdmdr; /**< \f$ \Omega_{0 dcdm}+\Omega_{0 dr} \f$: decaying cold dark matter (dcdm) decaying to dark radiation (dr) */
 
   double Gamma_dcdm; /**< \f$ \Gamma_{dcdm} \f$: decay constant for decaying cold dark matter */
+  double Gamma_dncdm; /**< \f$ \Gamma_{dncdm} \f$: decay constant for decaying non-cold dark matter */
 
   double Omega_ini_dcdm;    /**< \f$ \Omega_{ini,dcdm} \f$: rescaled initial value for dcdm density (see 1407.2418 for definitions) */
   short has_dcdm_bg_only;      /**< Flag that determines whether we only use the DCDM background evolution, or both the b/g and the perturbations in DCDM and DR */
@@ -130,6 +131,22 @@ struct background
 					     p-s-d is passed through file */
   char * ncdm_psd_files;                /**< list of filenames for tabulated p-s-d */
   /* end of parameters for tabulated ncdm p-s-d */
+
+  // Decaying Non-Cold DM parameters (DNCDM)
+ 
+  double M_dncdm;                        /**< decaying non-cold relic dimensionless ratios m_dncdm/T_dncdm */
+  double Omega0_dncdm;                  /**< Omega0_dncdm if the species did not decay */
+  double deg_dncdm, deg_dncdm_default;   /**< Degeneracy parameter in factor of p-s-d: 1 for one family of neutrinos
+                                             (= one neutrino plus its anti-neutrino,
+                                             total g*=1+1=2, so deg = 0.5 g*); and its default value */
+
+  /* the following parameters help to define the analytical dncdm phase space distributions (p-s-d) */
+  double T_dncdm,T_dncdm_default;       /**< list of 1st parameters in
+					     p-s-d of non-cold relics:
+					     relative temperature
+					     T_dncdm/T_gamma; and its
+					     default value */
+
 
   //@}
 
@@ -193,6 +210,15 @@ struct background
   int index_bg_p_ncdm1;       /**< pressure of first ncdm species (others contiguous) */
   int index_bg_pseudo_p_ncdm1;/**< another statistical momentum useful in ncdma approximation */
 
+  // Currently have two sets of indices for Decaying NCDM: for quantities computed from phase space, 
+  // and for quantities computed by integrating the boltzmann equation for the energy density.
+  // The latter has the decay term, but the former does not!
+  int index_bg_rho_dncdm;     /**< density of Decayig Non-Cold DM species */
+  int index_bg_p_dncdm;       /**< pressure of Decaying Non-Cold DM species */
+  int index_bg_pseudo_p_dncdm;/**< another statistical momentum useful in ncdma approximation from 1104.2935*/
+  int index_bg_w_dncdm;       /**< EoS parameter = p/rho */
+  int index_bg_pseudo_w_dncdm;/**< EoS parameter = pseudo_p/rho */
+
   int index_bg_Omega_r;       /**< relativistic density fraction (\f$ \Omega_{\gamma} + \Omega_{\nu r} \f$) */
 
   /* end of vector in normal format, now quantities in long format */
@@ -250,6 +276,7 @@ struct background
 
   int index_bi_a;       /**< {B} scale factor */
   int index_bi_rho_dcdm;/**< {B} dcdm density */
+  int index_bi_rho_dncdm;/**< {B} dncdm density */
   int index_bi_rho_dr;  /**< {B} dr density */
   int index_bi_rho_fld; /**< {B} fluid density */
   int index_bi_phi_scf;       /**< {B} scalar field value */
@@ -278,6 +305,7 @@ struct background
 
   short has_cdm;       /**< presence of cold dark matter? */
   short has_dcdm;      /**< presence of decaying cold dark matter? */
+  short has_dncdm;     /**< presence of decaying non-cold dark matter? */
   short has_dr;        /**< presence of relativistic decay radiation? */
   short has_scf;       /**< presence of a scalar field? */
   short has_ncdm;      /**< presence of non-cold dark matter? */
@@ -308,6 +336,28 @@ struct background
 
   //@}
 
+  /**
+   *@name - arrays related to sampling and integration of decaying ncdm phase space distributions. 
+   Compared to the NCDM case, we consider only a single species, so the quantities have one less dimension 
+   (i.e. no index over flavors)
+   */
+
+
+  //@{
+  int dncdm_quadrature_strategy; /**< Vector of integers according to quadrature strategy. */
+  int dncdm_input_q_size; /**< Vector of numbers of q bins */
+  double dncdm_qmax;   /**< Vector of maximum value of q */
+  double * q_dncdm_bg;  /**< Pointers to vector of background sampling in q */
+  double * w_dncdm_bg;  /**< Pointers to vector of corresponding quadrature weights w */
+  double * q_dncdm;     /**< Pointers to vector of perturbation sampling in q */
+  double * w_dncdm;     /**< Pointers to vector of corresponding quadrature weights w */
+  double * dlnf0_dlnq_dncdm; /**< Pointers to vectors of logarithmic derivatives of p-s-d */
+  int q_size_dncdm_bg; /**< Size of the q_ncdm_bg array */
+  int q_size_dncdm;    /**< Size of the q_ncdm array */
+  double factor_dncdm; /**< Normalization factor for calculating energy density etc.*/
+
+  //@}
+  //
   /**
    *@name - some flags needed for calling background functions
    */

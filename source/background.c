@@ -266,6 +266,11 @@ int background_functions(
   double rho_ncdm,p_ncdm,pseudo_p_ncdm;
   /* index for n_ncdm species */
   int n_ncdm;
+
+  /* background dncdm quantities that are computed from the distribution function*/
+  // n_dncdm is the number density, NOT the number of species as above
+  double n_dncdm, rho_dncdm,p_dncdm,pseudo_p_dncdm, w_dncdm, pseudo_w_dncdm;
+
   /* fluid's time-dependent equation of state parameter */
   double w_fld, dw_over_da, integral_fld;
   /* scale factor */
@@ -318,6 +323,59 @@ int background_functions(
     p_tot += 0.;
     rho_m += pvecback[pba->index_bg_rho_dcdm];
   }
+
+  /* Decaying Non-Cold DM (dncdm): adapted from NCDM below 
+   * This function integrates the phase space distribution to determine 
+   * equation of state parameters.
+   * */
+  if (pba->has_dncdm == _TRUE_) {
+
+    // First we estimate the equation of state parameters for a 
+    // fixed distribution (that does not know about the decay terms)
+
+    /* function returning background dncdm quantities (only
+       those for which non-NULL pointers are passed) */
+    class_call(background_ncdm_momenta(
+                                       pba->q_dncdm_bg,
+                                       pba->w_dncdm_bg,
+                                       pba->q_dsize_ncdm_bg,
+                                       pba->M_dncdm,
+                                       pba->factor_dncdm,
+                                       1./a_rel-1.,
+                                       &n_dncdm,
+                                       &rho_dncdm,
+                                       &p_dncdm,
+                                       NULL,
+                                       &pseudo_p_dncdm),
+               pba->error_message,
+               pba->error_message);
+
+    // Note that these quantities do not know about the decay, so this is an approximation
+    w_dncdm = p_dncdm/rho_dncdm;
+    pseudo_w_dncdm = pseudo_p_ncdm/rho_dncdm;
+    mn_over_rho_dncdm = pba->M_dncdm*n_dncdm/rho_dncdm;
+
+
+    /* Pass value of rho_dncdm to output */
+    pvecback[pba->index_bg_rho_dncdm] = pvecback_B[pba->index_bi_rho_dncdm];
+
+    // These 3 quantities are only approximate since they rely on the phase-space distribution
+    pvecback[pba->index_bg_p_dncdm] = w_dncdm*pvecback_B[pba->index_bi_rho_dncdm];
+    pvecback[pba->index_bg_n_dncdm] = mn_over_rho_dncdm*pvecback_B[pba->index_bi_rho_dncdm]/pba->M_dncdm;
+    pvecback[pba->index_bg_pseudo_p_dncdm] = pseudo_w_dncdm*pvecback_B[pba->index_bi_rho_dncdm];
+
+    /* (3 p_dncdm) is the "relativistic" contribution to rho_dncdm */
+    rho_r += 3.* pvecback[pba->index_bg_p_dncdm];
+
+    /* (rho_dncdm - 3 p_dncdm) is the "non-relativistic" contribution
+       to rho_dncdm */
+    rho_m += pvecback[pba->index_bg_rho_dncdm] - 3.* pvecback[pba->index_bg_p_dncdm];
+
+    rho_tot += pvecback[pba->index_bg_rho_dncdm];
+    p_tot += pvecback[pba->index_bg_p_dncdm];
+
+  }
+
 
   /* dr */
   if (pba->has_dr == _TRUE_) {
@@ -384,6 +442,8 @@ int background_functions(
       rho_m += rho_ncdm - 3.* p_ncdm;
     }
   }
+
+
 
   /* Lambda */
   if (pba->has_lambda == _TRUE_) {
@@ -829,6 +889,7 @@ int background_indices(
   pba->has_cdm = _FALSE_;
   pba->has_ncdm = _FALSE_;
   pba->has_dcdm = _FALSE_;
+  pba->has_dncdm = _FALSE_;
   pba->has_dr = _FALSE_;
   pba->has_scf = _FALSE_;
   pba->has_lambda = _FALSE_;
@@ -892,6 +953,12 @@ int background_indices(
   class_define_index(pba->index_bg_rho_ncdm1,pba->has_ncdm,index_bg,pba->N_ncdm);
   class_define_index(pba->index_bg_p_ncdm1,pba->has_ncdm,index_bg,pba->N_ncdm);
   class_define_index(pba->index_bg_pseudo_p_ncdm1,pba->has_ncdm,index_bg,pba->N_ncdm);
+
+  /* - indices for dncdm: these structures hold rho, p pseudo_p evaluated from the phase space dist. 
+   * Therefore they do not include the decay term!  */
+  class_define_index(pba->index_bg_rho_dncdm,pba->has_dncdm,index_bg,1);
+  class_define_index(pba->index_bg_p_dncdm,pba->has_dncdm,index_bg,1);
+  class_define_index(pba->index_bg_pseudo_p_dncdm,pba->has_dncdm,index_bg,1);
 
   /* - index for dcdm */
   class_define_index(pba->index_bg_rho_dcdm,pba->has_dcdm,index_bg,1);
@@ -975,6 +1042,9 @@ int background_indices(
 
   /* -> energy density in DCDM */
   class_define_index(pba->index_bi_rho_dcdm,pba->has_dcdm,index_bi,1);
+
+  /* -> energy density in DNCDM */
+  class_define_index(pba->index_bi_rho_dncdm,pba->has_dncdm,index_bi,1);
 
   /* -> energy density in DR */
   class_define_index(pba->index_bi_rho_dr,pba->has_dr,index_bi,1);
@@ -1953,6 +2023,11 @@ int background_initial_conditions(
       printf("Density is %g. a_today=%g. Omega_ini=%g\n",pvecback_integration[pba->index_bi_rho_dcdm],pba->a_today,pba->Omega_ini_dcdm);
   }
 
+  if (pba->has_dncdm == _TRUE_)
+  {
+
+  }
+
   if (pba->has_dr == _TRUE_){
     if (pba->has_dcdm == _TRUE_){
       /**  - f is the critical density fraction of DR. The exact solution is:
@@ -1966,6 +2041,14 @@ int background_initial_conditions(
       f = 1./3.*pow(a/pba->a_today,6)*pvecback_integration[pba->index_bi_rho_dcdm]*pba->Gamma_dcdm/pow(pba->H0,3)/sqrt(Omega_rad);
       pvecback_integration[pba->index_bi_rho_dr] = f*pba->H0*pba->H0/pow(a/pba->a_today,4);
     }
+
+    else if (pba->has_dncdm == _TRUE_)
+    {
+      f = 1./3.*pow(a/pba->a_today,6)*pvecback_integration[pba->index_bi_rho_dncdm]*pba->Gamma_dncdm/pow(pba->H0,3)/sqrt(Omega_rad);
+      pvecback_integration[pba->index_bi_rho_dr] = f*pba->H0*pba->H0/pow(a/pba->a_today,4);
+
+    }
+
     else{
       /** There is also a space reserved for a future case where dr is not sourced by dcdm */
       pvecback_integration[pba->index_bi_rho_dr] = 0.0;
@@ -2292,6 +2375,8 @@ int background_derivs(
   struct background_parameters_and_workspace * pbpaw;
   struct background * pba;
   double * pvecback, a, H, rho_M;
+  double w_dncdm;
+
 
   pbpaw = parameters_and_workspace;
   pba =  pbpaw->pba;
@@ -2326,6 +2411,7 @@ int background_derivs(
   dy[pba->index_bi_D] = y[pba->index_bi_D_prime];
   dy[pba->index_bi_D_prime] = -a*H*y[pba->index_bi_D_prime] + 1.5*a*a*rho_M*y[pba->index_bi_D];
 
+  // Decaying Cold DM 
   if (pba->has_dcdm == _TRUE_){
     /** - compute dcdm density \f$ \rho' = -3aH \rho - a \Gamma \rho \f$*/
     dy[pba->index_bi_rho_dcdm] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_dcdm]-
@@ -2336,6 +2422,25 @@ int background_derivs(
     /** - Compute dr density \f$ \rho' = -4aH \rho - a \Gamma \rho \f$ */
     dy[pba->index_bi_rho_dr] = -4.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_dr]+
       y[pba->index_bi_a]*pba->Gamma_dcdm*y[pba->index_bi_rho_dcdm];
+  }
+
+  // Decaying Non-Cold DM 
+  if (pba->has_dncdm == _TRUE_){
+    /** - compute dwdm density \f$ \rho' = -3aH (1 + w) \rho - a \Gamma rho * (m n/rho) \f$*/
+
+    // These quantities are estimates assuming a fixed phase space distribution
+    // One needs to compute the evolution of the psd including the decay term
+    w_dncdm = pvecback[pba->index_bg_p_dncdm]/pvecback[pba->index_bg_rho_dncdm];
+    mn_over_rho_dncdm = pba->M_dncdm*pvecback[pba->index_bg_n_dncdm]/pvecback[pba->index_bg_rho_dncdm];
+
+    dy[pba->index_bi_rho_dncdm] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*(1. + w_dncdm)*y[pba->index_bi_rho_dncdm]
+                                  -y[pba->index_bi_a]*pba->Gamma_dncdm*y[pba->index_bi_rho_dncdm]*mn_over_rho_dncdm;
+  }
+
+  if ((pba->has_dncdm == _TRUE_) && (pba->has_dr == _TRUE_)){
+    /** - Compute dr density \f$ \rho' = -4aH \rho - a \Gamma \rho * (m n/rho) \f$ */
+    dy[pba->index_bi_rho_dr] = -4.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*y[pba->index_bi_rho_dr]
+                               +y[pba->index_bi_a]*pba->Gamma_dncdm*y[pba->index_bi_rho_dncdm]*mn_over_rho_dncdm;
   }
 
   if (pba->has_fld == _TRUE_) {
