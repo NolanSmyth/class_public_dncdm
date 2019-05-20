@@ -269,7 +269,7 @@ int background_functions(
 
   /* background dncdm quantities that are computed from the distribution function*/
   // n_dncdm is the number density, NOT the number of species as above
-  double n_dncdm, rho_dncdm,p_dncdm,pseudo_p_dncdm, w_dncdm, pseudo_w_dncdm;
+  double n_dncdm, rho_dncdm,p_dncdm,pseudo_p_dncdm, w_dncdm, pseudo_w_dncdm, mn_over_rho_dncdm;
 
   /* fluid's time-dependent equation of state parameter */
   double w_fld, dw_over_da, integral_fld;
@@ -335,10 +335,12 @@ int background_functions(
 
     /* function returning background dncdm quantities (only
        those for which non-NULL pointers are passed) */
+
+    //printf(" -> a, M_dncdm, q_size_dncdm_bg, factor_dncdm, = %e, %e, %d, %e\n", a_rel, pba->M_dncdm, pba->q_size_dncdm_bg, pba->factor_dncdm);
     class_call(background_ncdm_momenta(
                                        pba->q_dncdm_bg,
                                        pba->w_dncdm_bg,
-                                       pba->q_dsize_ncdm_bg,
+                                       pba->q_size_dncdm_bg,
                                        pba->M_dncdm,
                                        pba->factor_dncdm,
                                        1./a_rel-1.,
@@ -352,8 +354,11 @@ int background_functions(
 
     // Note that these quantities do not know about the decay, so this is an approximation
     w_dncdm = p_dncdm/rho_dncdm;
-    pseudo_w_dncdm = pseudo_p_ncdm/rho_dncdm;
+    pseudo_w_dncdm = pseudo_p_dncdm/rho_dncdm;
     mn_over_rho_dncdm = pba->M_dncdm*n_dncdm/rho_dncdm;
+
+    if (pba->background_verbose > 4)
+      printf(" -> a, w_dncdm, pseudo_w_dncdm, mn_over_rho_dncdm = %e, %e, %e, %e\n", a_rel, w_dncdm, pseudo_w_dncdm, mn_over_rho_dncdm);
 
 
     /* Pass value of rho_dncdm to output */
@@ -364,7 +369,9 @@ int background_functions(
     pvecback[pba->index_bg_n_dncdm] = mn_over_rho_dncdm*pvecback_B[pba->index_bi_rho_dncdm]/pba->M_dncdm;
     pvecback[pba->index_bg_pseudo_p_dncdm] = pseudo_w_dncdm*pvecback_B[pba->index_bi_rho_dncdm];
 
+    //printf(" -> a, rho_dncdm, n_dncdm, p_dncdm = %e, %e, %e, %e\n", a_rel, pvecback[pba->index_bg_rho_dncdm], pvecback[pba->index_bg_n_dncdm], pvecback[pba->index_bg_p_dncdm]);
     /* (3 p_dncdm) is the "relativistic" contribution to rho_dncdm */
+
     rho_r += 3.* pvecback[pba->index_bg_p_dncdm];
 
     /* (rho_dncdm - 3 p_dncdm) is the "non-relativistic" contribution
@@ -374,6 +381,7 @@ int background_functions(
     rho_tot += pvecback[pba->index_bg_rho_dncdm];
     p_tot += pvecback[pba->index_bg_p_dncdm];
 
+    //printf(" -> a, rho_r, rho_m, p = %e, %e, %e, %e\n", a_rel, rho_r, rho_m, p_tot);
   }
 
 
@@ -908,6 +916,12 @@ int background_indices(
     if (pba->Gamma_dcdm != 0.)
       pba->has_dr = _TRUE_;
   }
+  if (pba->Omega_ini_dncdm != 0.)
+  {
+    pba->has_dncdm = _TRUE_;
+    if (pba->Gamma_dncdm != 0.)
+      pba->has_dr = _TRUE_;
+  }
 
   if (pba->Omega0_scf != 0.)
     pba->has_scf = _TRUE_;
@@ -958,6 +972,7 @@ int background_indices(
    * Therefore they do not include the decay term!  */
   class_define_index(pba->index_bg_rho_dncdm,pba->has_dncdm,index_bg,1);
   class_define_index(pba->index_bg_p_dncdm,pba->has_dncdm,index_bg,1);
+  class_define_index(pba->index_bg_n_dncdm,pba->has_dncdm,index_bg,1);
   class_define_index(pba->index_bg_pseudo_p_dncdm,pba->has_dncdm,index_bg,1);
 
   /* - index for dcdm */
@@ -1097,7 +1112,7 @@ int background_indices(
 /**
  * This is the routine where the distribution function f0(q) of each
  * ncdm species is specified (it is the only place to modify if you
- * need a partlar f0(q))
+ * need a particular f0(q))
  *
  * @param pbadist Input:  structure containing all parameters defining f0(q)
  * @param q       Input:  momentum
@@ -1254,6 +1269,54 @@ int background_ncdm_test_function(
   /** Using a + bq creates problems for otherwise acceptable distributions
       which diverges as \f$ 1/r \f$ or \f$ 1/r^2 \f$ for \f$ r\to 0 \f$*/
   *test = pow(2.0*_PI_,3)/6.0*(c*q*q-d*q*q*q-e*q*q*q*q);
+
+  return _SUCCESS_;
+}
+
+
+/**
+ * This is the routine where the distribution function f0(q) 
+ * for decaying ncdm species is specified (it is the only place to modify if you
+ * need a particular f0(q))
+ *
+ * @param pbadist Input:  structure containing all parameters defining f0(q)
+ * @param q       Input:  momentum
+ * @param f0      Output: phase-space distribution
+ */
+
+int background_dncdm_distribution(
+                                 void * pbadist,
+                                 double q,
+                                 double * f0
+                                 ) {
+  struct background * pba;
+  struct background_parameters_for_distributions * pbadist_local;
+  double ksi;
+  double *param;
+
+  /** - extract from the input structure pbadist all the relevant information */
+  pbadist_local = pbadist;          /* restore actual format of pbadist */
+  pba = pbadist_local->pba;         /* extract the background structure from it */
+  param = pba->dncdm_psd_parameters; /* extract the optional parameter list from it */
+  ksi = pba->ksi_dncdm;      /* extract chemical potential */
+
+  if (_TRUE_)
+  {
+    /**************************************************/
+    /*    BOSE-EINSTEIN INCLUDING CHEMICAL POTENTIALS   */
+    /**************************************************/
+
+    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)-1.) +1./(exp(q+ksi)-1.));
+
+  }
+
+  else {
+    /**************************************************/
+    /*    FERMI-DIRAC INCLUDING CHEMICAL POTENTIALS   */
+    /**************************************************/
+
+    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
+  }
 
   return _SUCCESS_;
 }
@@ -1478,6 +1541,172 @@ int background_ncdm_init(
   return _SUCCESS_;
 }
 
+
+/**
+ * This function finds optimal quadrature weights for the 
+ * decaying NCDM species. A copy of the NCDM function above
+ *
+ * @param ppr Input: precision structure
+ * @param pba Input/Output: background structure
+ */
+
+int background_dncdm_init(
+                         struct precision *ppr,
+                         struct background *pba
+                         ) 
+{
+
+  int index_q, k,tolexp,row,status,filenum;
+  double f0m2,f0m1,f0,f0p1,f0p2,dq,q,df0dq,tmp1,tmp2;
+  struct background_parameters_for_distributions pbadist;
+  FILE *psdfile;
+
+  pbadist.pba = pba;
+
+  // Unlike NCDM above, we consider only a single decaying NCDM species
+  // So the dimensionality of all arrays is reduced. we do not need to allocate arrays of pointers
+
+  pbadist.n_ncdm = 0;
+  pbadist.q = NULL;
+  pbadist.tablesize = 0;
+  
+  /* Handle perturbation qsampling: */
+  if (pba->dncdm_quadrature_strategy==qm_auto){
+    /** Automatic q-sampling for this species */
+    class_alloc(pba->q_dncdm,_QUADRATURE_MAX_*sizeof(double),pba->error_message);
+    class_alloc(pba->w_dncdm,_QUADRATURE_MAX_*sizeof(double),pba->error_message);
+
+    class_call(get_qsampling(pba->q_dncdm,
+			   pba->w_dncdm,
+			   &(pba->q_size_dncdm),
+			   _QUADRATURE_MAX_,
+			   ppr->tol_ncdm,
+			   pbadist.q,
+			   pbadist.tablesize,
+			   background_ncdm_test_function,
+			   background_dncdm_distribution,
+			   &pbadist,
+			   pba->error_message),
+	pba->error_message,
+	pba->error_message);
+
+    pba->q_dncdm=realloc(pba->q_ncdm,pba->q_size_dncdm*sizeof(double));
+    pba->w_dncdm=realloc(pba->w_ncdm,pba->q_size_dncdm*sizeof(double));
+
+
+    if (pba->background_verbose > 0)
+	  printf("dncdm species sampled with %d points for purpose of perturbation integration\n", pba->q_size_dncdm);
+
+    /* Handle background q_sampling: */
+    class_alloc(pba->q_dncdm_bg,_QUADRATURE_MAX_BG_*sizeof(double),pba->error_message);
+    class_alloc(pba->w_dncdm_bg,_QUADRATURE_MAX_BG_*sizeof(double),pba->error_message);
+
+    class_call(get_qsampling(pba->q_dncdm_bg,
+               pba->w_dncdm_bg,
+               &(pba->q_size_dncdm_bg),
+               _QUADRATURE_MAX_BG_,
+               ppr->tol_ncdm_bg,
+               pbadist.q,
+               pbadist.tablesize,
+               background_ncdm_test_function,
+               background_dncdm_distribution,
+               &pbadist,
+               pba->error_message),
+    pba->error_message,
+    pba->error_message);
+
+
+    pba->q_dncdm_bg=realloc(pba->q_dncdm_bg,pba->q_size_dncdm_bg*sizeof(double));
+    pba->w_dncdm_bg=realloc(pba->w_dncdm_bg,pba->q_size_dncdm_bg*sizeof(double));
+
+    /** - in verbose mode, inform user of number of sampled momenta for background quantities */
+    if (pba->background_verbose > 0)
+	  printf("Decaying ncdm species sampled with %d points for purpose of background integration\n", pba->q_size_dncdm_bg);
+  }
+
+  else {
+    /** Manual q-sampling for this species. Same sampling used for both perturbation and background sampling, since this will usually be a high precision setting anyway */
+    pba->q_size_dncdm_bg = pba->dncdm_input_q_size;
+    pba->q_size_dncdm = pba->dncdm_input_q_size;
+    class_alloc(pba->q_dncdm_bg,pba->q_size_dncdm_bg*sizeof(double),pba->error_message);
+    class_alloc(pba->w_dncdm_bg,pba->q_size_dncdm_bg*sizeof(double),pba->error_message);
+    class_alloc(pba->q_dncdm,pba->q_size_dncdm*sizeof(double),pba->error_message);
+    class_alloc(pba->w_dncdm,pba->q_size_dncdm*sizeof(double),pba->error_message);
+
+    class_call(get_qsampling_manual(pba->q_dncdm,
+				    pba->w_dncdm,
+				    pba->q_size_dncdm,
+				    pba->dncdm_qmax,
+				    pba->dncdm_quadrature_strategy,
+				    pbadist.q,
+				    pbadist.tablesize,
+				    background_dncdm_distribution,
+				    &pbadist,
+				    pba->error_message),
+	   pba->error_message,
+	   pba->error_message);
+    for (index_q=0; index_q<pba->q_size_dncdm; index_q++) {
+	  pba->q_dncdm_bg[index_q] = pba->q_dncdm[index_q];
+	  pba->w_dncdm_bg[index_q] = pba->w_dncdm[index_q];
+    }
+  /** - in verbose mode, inform user of number of sampled momenta
+      for background quantities */
+    if (pba->background_verbose > 0)
+	  printf("Decaying ncdm species sampled with %d points for purpose of background and perturbation integration using the manual method\n", pba->q_size_dncdm);
+  }
+
+  class_alloc(pba->dlnf0_dlnq_dncdm,
+              pba->q_size_dncdm*sizeof(double),
+              pba->error_message);
+
+  for (index_q=0; index_q<pba->q_size_dncdm; index_q++) {
+    q = pba->q_dncdm[index_q];
+    class_call(background_dncdm_distribution(&pbadist,q,&f0),
+               pba->error_message,pba->error_message);
+
+    //Loop to find appropriate dq:
+    for(tolexp=_PSD_DERIVATIVE_EXP_MIN_; tolexp<_PSD_DERIVATIVE_EXP_MAX_; tolexp++){
+
+      if (index_q == 0){
+        dq = MIN((0.5-ppr->smallest_allowed_variation)*q,2*exp(tolexp)*(pba->q_dncdm[index_q+1]-q));
+      }
+      else if (index_q == pba->q_size_dncdm-1){
+        dq = exp(tolexp)*2.0*(pba->q_dncdm[index_q]-pba->q_dncdm[index_q-1]);
+      }
+      else{
+        dq = exp(tolexp)*(pba->q_dncdm[index_q+1]-pba->q_dncdm[index_q-1]);
+      }
+
+      class_call(background_dncdm_distribution(&pbadist,q-2*dq,&f0m2),
+                 pba->error_message,pba->error_message);
+      class_call(background_dncdm_distribution(&pbadist,q+2*dq,&f0p2),
+                 pba->error_message,pba->error_message);
+
+      if (fabs((f0p2-f0m2)/f0)>sqrt(ppr->smallest_allowed_variation)) break;
+    }
+
+    class_call(background_dncdm_distribution(&pbadist,q-dq,&f0m1),
+               pba->error_message,pba->error_message);
+    class_call(background_dncdm_distribution(&pbadist,q+dq,&f0p1),
+               pba->error_message,pba->error_message);
+
+    //5 point estimate of the derivative:
+    df0dq = (+f0m2-8*f0m1+8*f0p1-f0p2)/12.0/dq;
+    //printf("df0dq[%g] = %g. dlf=%g ?= %g. f0 =%g.\n",q,df0dq,q/f0*df0dq,
+    //Avoid underflow in extreme tail:
+    if (fabs(f0)==0.)
+      pba->dlnf0_dlnq_dncdm[index_q] = -q; /* valid for whatever f0 with exponential tail in exp(-q) */
+    else
+      pba->dlnf0_dlnq_dncdm[index_q] = q/f0*df0dq;
+    }
+
+    pba->factor_dncdm=pba->deg_dncdm*4*_PI_*pow(pba->T_cmb*pba->T_dncdm*_k_B_,4)*8*_PI_*_G_
+      /3./pow(_h_P_/2./_PI_,3)/pow(_c_,7)*_Mpc_over_m_*_Mpc_over_m_;
+
+
+  return _SUCCESS_;
+}
+
 /**
  * For a given ncdm species: given the quadrature weights, the mass
  * and the redshift, find background quantities by a quick weighted
@@ -1552,7 +1781,7 @@ int background_ncdm_momenta(
   if (p!=NULL) *p *= factor2;
   if (drho_dM!=NULL) *drho_dM *= factor2;
   if (pseudo_p!=NULL) *pseudo_p *=factor2;
-
+  //printf(" -> z, n, rho, p = %e, %e\n",z,*rho);
   return _SUCCESS_;
 }
 
@@ -1954,6 +2183,8 @@ int background_initial_conditions(
   double a;
 
   double rho_ncdm, p_ncdm, rho_ncdm_rel_tot=0.;
+  double rho_dncdm, p_dncdm, rho_dncdm_rel_tot=0.;
+
   double f,Omega_rad, rho_rad;
   int counter,is_early_enough,n_ncdm;
   double scf_lambda;
@@ -2004,6 +2235,51 @@ int background_initial_conditions(
 	       "Search for initial scale factor a such that all ncdm species are relativistic failed.");
   }
 
+  if (pba->has_dncdm == _TRUE_) {
+
+    for (counter=0; counter < _MAX_IT_; counter++) {
+
+      is_early_enough = _TRUE_;
+      rho_dncdm_rel_tot = 0.;
+	  class_call(background_ncdm_momenta(pba->q_dncdm_bg,
+					   pba->w_dncdm_bg,
+					   pba->q_size_dncdm_bg,
+					   pba->M_dncdm,
+					   pba->factor_dncdm,
+					   pba->a_today/a-1.0,
+					   NULL,
+					   &rho_dncdm,
+					   &p_dncdm,
+					   NULL,
+					   NULL),
+                   pba->error_message,
+                   pba->error_message);
+	  rho_dncdm_rel_tot += 3.*p_dncdm;
+      // Note that we are still using ncdm tolerances.
+	  if (fabs(p_dncdm/rho_dncdm-1./3.)>ppr->tol_ncdm_initial_w)
+	    is_early_enough = _FALSE_;
+      if (is_early_enough == _TRUE_)
+	    break;
+      else
+	    a *= _SCALE_BACK_;
+    }
+    class_test(counter == _MAX_IT_,
+	       pba->error_message,
+	       "Search for initial scale factor a such that dncdm species is relativistic failed.");
+
+
+    pvecback_integration[pba->index_bi_rho_dncdm] =pba->Omega_ini_dncdm*pow(pba->H0,2)*pow(pba->a_today/a,4);
+
+    /** - We must add the relativistic contribution from NCDM species */
+    rho_rad += pvecback_integration[pba->index_bi_rho_dncdm];
+
+    if (pba->background_verbose > 0)
+      printf("DNCDM Density is %g. a_today=%g. Omega_ini_dncdm=%g\n",pvecback_integration[pba->index_bi_rho_dncdm],pba->a_today,pba->Omega_ini_dncdm);
+
+
+
+  }
+
   pvecback_integration[pba->index_bi_a] = a;
 
   /* Set initial values of {B} variables: */
@@ -2023,10 +2299,6 @@ int background_initial_conditions(
       printf("Density is %g. a_today=%g. Omega_ini=%g\n",pvecback_integration[pba->index_bi_rho_dcdm],pba->a_today,pba->Omega_ini_dcdm);
   }
 
-  if (pba->has_dncdm == _TRUE_)
-  {
-
-  }
 
   if (pba->has_dr == _TRUE_){
     if (pba->has_dcdm == _TRUE_){
@@ -2375,7 +2647,7 @@ int background_derivs(
   struct background_parameters_and_workspace * pbpaw;
   struct background * pba;
   double * pvecback, a, H, rho_M;
-  double w_dncdm;
+  double w_dncdm, mn_over_rho_dncdm;
 
 
   pbpaw = parameters_and_workspace;
@@ -2433,8 +2705,12 @@ int background_derivs(
     w_dncdm = pvecback[pba->index_bg_p_dncdm]/pvecback[pba->index_bg_rho_dncdm];
     mn_over_rho_dncdm = pba->M_dncdm*pvecback[pba->index_bg_n_dncdm]/pvecback[pba->index_bg_rho_dncdm];
 
+
+    if (pba->background_verbose > 4)
+      printf(" -> dy: a, w_dncdm,  mn_over_rho_dncdm = %e, %e, %e\n", y[pba->index_bi_a], w_dncdm,  mn_over_rho_dncdm);
     dy[pba->index_bi_rho_dncdm] = -3.*y[pba->index_bi_a]*pvecback[pba->index_bg_H]*(1. + w_dncdm)*y[pba->index_bi_rho_dncdm]
                                   -y[pba->index_bi_a]*pba->Gamma_dncdm*y[pba->index_bi_rho_dncdm]*mn_over_rho_dncdm;
+    //printf(" -> dy: a, p, rho = %e, %e, %e\n", y[pba->index_bi_a], y[pba->index_bi_rho_dncdm], 0.);
   }
 
   if ((pba->has_dncdm == _TRUE_) && (pba->has_dr == _TRUE_)){

@@ -813,6 +813,81 @@ int input_read_parameters(
   }
 
 
+  /** - Decaying NCDM - */
+
+  // We specify the initial density of Decaying NCDM as a contribution to Neff
+  class_call(parser_read_double(pfc,"N_eff_dncdm",&param1,&flag1,errmsg),
+             errmsg,
+             errmsg);
+  if (flag1 == _TRUE_ && param1 > 0)
+  {
+    pba->Omega_ini_dncdm = param1*7./8.*pow(4./11.,4./3.)*pba->Omega0_g;
+
+
+    /* Read mass of the dncdm species: */
+    class_read_double("m_dncdm",pba->m_dncdm_in_eV);
+
+    /** - Read Gamma in same units as H0, i.e. km/(s Mpc)*/
+    class_read_double("Gamma_dncdm",pba->Gamma_dncdm);
+    /* Convert to Mpc */
+    pba->Gamma_dncdm *= (1.e3 / _c_);
+
+
+    /* Read degeneracy of each ncdm species: 
+     * Note that this is 1/2 times the number of degrees of freedom.
+     * e.g. 1 real scalar has 1 d.o.f but degeneracy parameter 0.5 (see the def. of the psd in background.c).
+     * */
+    class_read_double_or_default("deg_dncdm",pba->deg_dncdm,pba->deg_dncdm_default);
+
+    if (input_verbose > 0)
+    {
+      printf(" -> Read in Decaying NCDM parameters: Omega_ini_dncdm, m_dncdm, Gamma_dncdm = %e, %e, %e\n", 
+          pba->Omega_ini_dncdm, pba->m_dncdm_in_eV, pba->Gamma_dncdm);
+    }
+
+    /* Given the degeneracy parameter and initial energy density we can solve for the temperature, 
+     * assuming the Decaying NCDM is thermal */
+    pba->T_dncdm = pow(pba->Omega_ini_dncdm/pba->Omega0_g/pba->deg_dncdm,0.25);
+    if (input_verbose > 0) printf(" -> Evaluated decaying NCDM temperature, relative to photons to be T_dncdm = %e\n",pba->T_dncdm);
+
+    /* precision parameters from the ncdm module*/
+    class_read_double("tol_M_ncdm",ppr->tol_M_ncdm);
+    class_read_double("tol_ncdm_newtonian",ppr->tol_ncdm_newtonian);
+    class_read_double("tol_ncdm_synchronous",ppr->tol_ncdm_synchronous);
+    class_read_double("tol_ncdm_bg",ppr->tol_ncdm_bg);
+
+    if (ppt->gauge == synchronous)
+      ppr->tol_ncdm = ppr->tol_ncdm_synchronous;
+    if (ppt->gauge == newtonian)
+      ppr->tol_ncdm = ppr->tol_ncdm_newtonian;
+
+    /* Quadrature modes, 0 is qm_auto. */
+    class_read_int_or_default("Quadrature strategy",pba->dncdm_quadrature_strategy,0);
+    /* Number of momentum bins */
+    class_read_int_or_default("Number of momentum bins",pba->dncdm_input_q_size,-1);
+
+    /* qmax, if relevant */
+    class_read_double_or_default("Maximum q",pba->dncdm_qmax,15);
+
+    /* Read chemical potentials: */
+    class_read_double_or_default("ksi_dncdm",pba->ksi_dncdm,pba->ksi_dncdm_default);
+
+    /* Read (optional) p.s.d.-parameters:*/
+    parser_read_list_of_doubles(pfc,
+                                "dncdm_psd_parameters",
+                                &entries_read,
+                                &(pba->dncdm_psd_parameters),
+                                &flag2,
+                                errmsg);
+
+    class_call(background_dncdm_init(ppr,pba),
+               pba->error_message,
+               errmsg);
+
+    // We do not need to compute the Decayed NCDM density today, since it has decayed
+    pba->M_dncdm = pba->m_dncdm_in_eV/_k_B_*_eV_/pba->T_dncdm/pba->T_cmb;
+
+  }
 
   /** - non-cold relics (ncdm) */
   class_read_int("N_ncdm",N_ncdm);
@@ -2979,6 +3054,21 @@ int input_default_params(
   pba->deg_ncdm = NULL;
   pba->ncdm_psd_parameters = NULL;
   pba->ncdm_psd_files = NULL;
+
+  /* Decaying NCDM default parameters */
+
+  pba->Omega_ini_dncdm = 0.0;
+  pba->m_dncdm_in_eV = 0.0;
+  pba->Gamma_dncdm = 0.0;
+  pba->deg_dncdm_default = 0.5;
+  pba->deg_dncdm = 0;
+  pba->dncdm_psd_parameters = NULL;
+
+  pba->T_dncdm = 0;
+  pba->ksi_dncdm_default = 0.;
+  pba->ksi_dncdm = 0;
+
+  /* ------------------------------------------------------------------------*/
 
   pba->Omega0_scf = 0.; /* Scalar field defaults */
   pba->attractor_ic_scf = _TRUE_;

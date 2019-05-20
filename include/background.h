@@ -135,18 +135,28 @@ struct background
   // Decaying Non-Cold DM parameters (DNCDM)
  
   double M_dncdm;                        /**< decaying non-cold relic dimensionless ratios m_dncdm/T_dncdm */
-  double Omega0_dncdm;                  /**< Omega0_dncdm if the species did not decay */
+  double Omega_ini_dncdm;                   /**< Omega0_dncdm if the species did not decay */
   double deg_dncdm, deg_dncdm_default;   /**< Degeneracy parameter in factor of p-s-d: 1 for one family of neutrinos
                                              (= one neutrino plus its anti-neutrino,
                                              total g*=1+1=2, so deg = 0.5 g*); and its default value */
 
   /* the following parameters help to define the analytical dncdm phase space distributions (p-s-d) */
-  double T_dncdm,T_dncdm_default;       /**< list of 1st parameters in
+  double T_dncdm;       /**< list of 1st parameters in
 					     p-s-d of non-cold relics:
 					     relative temperature
 					     T_dncdm/T_gamma; and its
 					     default value */
 
+  double m_dncdm_in_eV; /**< list of ncdm masses in eV (inferred from M_ncdm and other parameters above) */
+
+  double ksi_dncdm, ksi_dncdm_default;  /**< list of 2nd parameters in
+					     p-s-d of decaying non-cold relics:
+					     relative chemical potential
+					     ksi_dncdm/T_dncdm; and its
+					     default value */
+  double * dncdm_psd_parameters;         /**< list of parameters for specifying/modifying
+                                             ncdm p.s.d.'s, to be customized for given model
+                                             (could be e.g. mixing angles) */
 
   //@}
 
@@ -215,9 +225,8 @@ struct background
   // The latter has the decay term, but the former does not!
   int index_bg_rho_dncdm;     /**< density of Decayig Non-Cold DM species */
   int index_bg_p_dncdm;       /**< pressure of Decaying Non-Cold DM species */
+  int index_bg_n_dncdm;       /**< number debsity of Decaying Non-Cold DM species */
   int index_bg_pseudo_p_dncdm;/**< another statistical momentum useful in ncdma approximation from 1104.2935*/
-  int index_bg_w_dncdm;       /**< EoS parameter = p/rho */
-  int index_bg_pseudo_w_dncdm;/**< EoS parameter = pseudo_p/rho */
 
   int index_bg_Omega_r;       /**< relativistic density fraction (\f$ \Omega_{\gamma} + \Omega_{\nu r} \f$) */
 
@@ -490,6 +499,12 @@ extern "C" {
 				  double * f0
 				  );
 
+  int background_dncdm_distribution(
+				  void *pba,
+				  double q,
+				  double * f0
+				  );
+
   int background_ncdm_test_function(
 				     void *pba,
 				     double q,
@@ -497,6 +512,11 @@ extern "C" {
 				     );
 
   int background_ncdm_init(
+			    struct precision *ppr,
+			    struct background *pba
+			    );
+
+  int background_dncdm_init(
 			    struct precision *ppr,
 			    struct background *pba
 			    );

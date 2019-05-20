@@ -26,6 +26,17 @@
       destination = param1;						\
   } while(0);
 
+#define class_read_double_or_default(name,destination,default)				\
+  do {									\
+    class_call(parser_read_double(pfc,name,&param1,&flag1,errmsg),      \
+	       errmsg,							\
+	       errmsg);							\
+    if (flag1 == _TRUE_)						\
+      destination = param1;						\
+    else                                        \
+      destination = default;                    \
+  } while(0);
+
 
 #define class_read_int(name,destination)				\
   do {									\
@@ -34,6 +45,17 @@
 	       errmsg);							\
     if (flag1 == _TRUE_)						\
       destination = int1;						\
+  } while(0);
+
+#define class_read_int_or_default(name,destination,default)				\
+  do {									\
+    class_call(parser_read_int(pfc,name,&int1,&flag1,errmsg),		\
+ 	       errmsg,							\
+	       errmsg);							\
+    if (flag1 == _TRUE_)						\
+      destination = int1;						\
+    else                                        \
+      destination = default;                    \
   } while(0);
 
 #define class_read_string(name,destination)				\
