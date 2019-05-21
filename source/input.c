@@ -841,8 +841,8 @@ int input_read_parameters(
 
     if (input_verbose > 0)
     {
-      printf(" -> Read in Decaying NCDM parameters: Omega_ini_dncdm, m_dncdm, Gamma_dncdm = %e, %e, %e\n", 
-          pba->Omega_ini_dncdm, pba->m_dncdm_in_eV, pba->Gamma_dncdm);
+      printf(" -> Read in Decaying NCDM parameters: Omega_ini_dncdm, m_dncdm, dofs, Gamma_dncdm = %e, %e, %e, %e\n", 
+          pba->Omega_ini_dncdm, pba->m_dncdm_in_eV, 2.*pba->deg_dncdm, pba->Gamma_dncdm);
     }
 
     /* Given the degeneracy parameter and initial energy density we can solve for the temperature, 
