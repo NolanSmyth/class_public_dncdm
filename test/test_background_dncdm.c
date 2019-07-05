@@ -44,13 +44,13 @@ int main(int argc, char **argv) {
 
   background_tau_of_z(&ba, 0., &tau_at_z);
 
-
   /* 
    * The prefactors here come from the fact that we actually assume DNCDM is a Boson, so it follows the B-E distribution.
    * This means that the degrees of freedom is different in calculation of the temperature ratio from Neff, 
    * AND, the degrees of freedom is different in computing the final abundance.
    * The former involves the relativistic energy density, while the latter involves the number density
    */
+  // This is only correct if Gamma = 0!
   Omega_dncdm = (8./7.)*(3./4.)*ba.background_table[(ba.bt_size-1)*ba.bg_size + ba.index_bg_rho_dncdm]/pow(ba.H0,2); 
   printf(" -> decaying non-cold dark matter species has m = %e eV (so m / omega =%e eV)\n",
              ba.m_dncdm_in_eV,

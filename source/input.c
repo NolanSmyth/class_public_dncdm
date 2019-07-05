@@ -179,7 +179,6 @@ int input_init_from_arguments(
              errmsg);
 
   class_call(parser_free(&fc),errmsg,errmsg);
-
   return _SUCCESS_;
 }
 
@@ -2754,6 +2753,8 @@ int input_read_parameters(
   class_read_int("l_max_ur",ppr->l_max_ur);
   if (pba->N_ncdm>0)
     class_read_int("l_max_ncdm",ppr->l_max_ncdm);
+  if (pba->Omega_ini_dncdm>0.)
+    class_read_int("l_max_dncdm",ppr->l_max_dncdm);
   class_read_int("l_max_g_ten",ppr->l_max_g_ten);
   class_read_int("l_max_pol_g_ten",ppr->l_max_pol_g_ten);
   class_read_double("curvature_ini",ppr->curvature_ini);
@@ -3458,6 +3459,7 @@ int input_default_precision ( struct precision * ppr ) {
   ppr->l_max_dr=17;
   ppr->l_max_ur=17;
   ppr->l_max_ncdm=17;
+  ppr->l_max_dncdm=17;
   ppr->l_max_g_ten=5;
   ppr->l_max_pol_g_ten=5;
 
@@ -3481,6 +3483,11 @@ int input_default_precision ( struct precision * ppr ) {
 
   ppr->ncdm_fluid_approximation = ncdmfa_CLASS;
   ppr->ncdm_fluid_trigger_tau_over_tau_k = 31.;
+
+  ppr->dncdm_fluid_approximation = ncdmfa_CLASS;
+  // We make the default approx switching threshold different from the above, b/c CLASS cannot switch two approximations at once;
+  // This is handy if the model includes both DNCDM and NCDM (i.e. massive neutrinos).
+  ppr->dncdm_fluid_trigger_tau_over_tau_k = 32.;
 
   ppr->neglect_CMB_sources_below_visibility = 1.e-3;
 

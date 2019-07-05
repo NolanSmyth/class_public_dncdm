@@ -552,6 +552,7 @@ struct precision
   int l_max_dr;   /**< number of momenta in Boltzmann hierarchy for decay radiation, at least 4 */
   int l_max_ur;   /**< number of momenta in Boltzmann hierarchy for relativistic neutrino/relics (scalar), at least 4 */
   int l_max_ncdm;   /**< number of momenta in Boltzmann hierarchy for relativistic neutrino/relics (scalar), at least 4 */
+  int l_max_dncdm;   /**< number of momenta in Boltzmann hierarchy for decaying relativistic relics (scalar), at least 4 */
   int l_max_g_ten;     /**< number of momenta in Boltzmann hierarchy for photon temperature (tensor), at least 4 */
   int l_max_pol_g_ten; /**< number of momenta in Boltzmann hierarchy for photon polarization (tensor), at least 4 */
 
@@ -611,12 +612,19 @@ struct precision
   double ur_fluid_trigger_tau_over_tau_k;
 
   int ncdm_fluid_approximation; /**< method for non-cold dark matter fluid approximation */
+  int dncdm_fluid_approximation; /**< method for decaying non-cold dark matter fluid approximation */
 
   /**
    * when to switch off ncdm (massive neutrinos / non-cold
    * relics) fluid approximation
    */
   double ncdm_fluid_trigger_tau_over_tau_k;
+
+  /**
+   * when to switch off dncdm (massive neutrinos / non-cold
+   * relics) fluid approximation
+   */
+  double dncdm_fluid_trigger_tau_over_tau_k;
 
   /**
    * whether CMB source functions can be approximated as zero when

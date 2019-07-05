@@ -129,6 +129,8 @@ TEST_STEPHANE = test_stephane.o
 
 TEST_BACKGROUND_DNCDM = test_background_dncdm.o
 
+TEST_PERTURBATIONS_DNCDM = test_perturbations_dncdm.o
+
 C_TOOLS =  $(addprefix tools/, $(addsuffix .c,$(basename $(TOOLS))))
 C_SOURCE = $(addprefix source/, $(addsuffix .c,$(basename $(SOURCE) $(OUTPUT))))
 C_TEST = $(addprefix test/, $(addsuffix .c,$(basename $(TEST_DEGENERACY) $(TEST_LOOPS) $(TEST_TRANSFER) $(TEST_NONLINEAR) $(TEST_PERTURBATIONS) $(TEST_THERMODYNAMICS))))
@@ -186,6 +188,9 @@ test_hyperspherical: $(TOOLS) $(TEST_HYPERSPHERICAL)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o test_hyperspherical $(addprefix build/,$(notdir $^)) -lm
 
 test_background_dncdm: $(TOOLS) $(SOURCE) $(EXTERNAL) $(TEST_BACKGROUND_DNCDM)
+	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o  $@ $(addprefix build/,$(notdir $^)) -lm
+
+test_perturbations_dncdm: $(TOOLS) $(SOURCE) $(EXTERNAL) $(TEST_PERTURBATIONS_DNCDM)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o  $@ $(addprefix build/,$(notdir $^)) -lm
 
 tar: $(C_ALL) $(C_TEST) $(H_ALL) $(PRE_ALL) $(INI_ALL) $(MISC_FILES) $(HYREC) $(PYTHON_FILES)

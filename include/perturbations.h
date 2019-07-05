@@ -30,6 +30,7 @@ enum tca_flags {tca_on, tca_off};
 enum rsa_flags {rsa_off, rsa_on};
 enum ufa_flags {ufa_off, ufa_on};
 enum ncdmfa_flags {ncdmfa_off, ncdmfa_on};
+enum dncdmfa_flags {dncdmfa_off, dncdmfa_on};
 
 //@}
 
@@ -43,6 +44,7 @@ enum tca_method {first_order_MB,first_order_CAMB,first_order_CLASS,second_order_
 enum rsa_method {rsa_null,rsa_MD,rsa_MD_with_reio,rsa_none};
 enum ufa_method {ufa_mb,ufa_hu,ufa_CLASS,ufa_none};
 enum ncdmfa_method {ncdmfa_mb,ncdmfa_hu,ncdmfa_CLASS,ncdmfa_none};
+enum dncdmfa_method {dncdmfa_mb,dncdmfa_hu,dncdmfa_CLASS,dncdmfa_none};
 enum tensor_methods {tm_photons_only,tm_massless_approximation,tm_exact};
 
 //@}
@@ -247,6 +249,7 @@ struct perturbs
   short has_source_delta_dr; /**< do we need source for delta of decay radiation? */
   short has_source_delta_ur; /**< do we need source for delta of ultra-relativistic neutrinos/relics? */
   short has_source_delta_ncdm; /**< do we need source for delta of all non-cold dark matter species (e.g. massive neutrinos)? */
+  short has_source_delta_dncdm; /**< do we need source for delta of decaying non-cold dark matter species? */
   short has_source_theta_m;    /**< do we need source for theta of total matter? */
   short has_source_theta_cb; /**< do we ALSO need source for theta of ONLY cdm and baryon? */
   short has_source_theta_g;    /**< do we need source for theta of gammas? */
@@ -258,6 +261,7 @@ struct perturbs
   short has_source_theta_dr; /**< do we need source for theta of ultra-relativistic neutrinos/relics? */
   short has_source_theta_ur; /**< do we need source for theta of ultra-relativistic neutrinos/relics? */
   short has_source_theta_ncdm; /**< do we need source for theta of all non-cold dark matter species (e.g. massive neutrinos)? */
+  short has_source_theta_dncdm; /**< do we need source for theta of decaying non-cold dark matter species? */
   short has_source_phi;          /**< do we need source for metric fluctuation phi? */
   short has_source_phi_prime;    /**< do we need source for metric fluctuation phi'? */
   short has_source_phi_plus_psi; /**< do we need source for metric fluctuation (phi+psi)? */
@@ -286,6 +290,7 @@ struct perturbs
   int index_tp_delta_dr; /**< index value for delta of decay radiation */
   int index_tp_delta_ur; /**< index value for delta of ultra-relativistic neutrinos/relics */
   int index_tp_delta_ncdm1; /**< index value for delta of first non-cold dark matter species (e.g. massive neutrinos) */
+  int index_tp_delta_dncdm; /**< index value for delta of decaying non-cold dark matter species */
   int index_tp_perturbed_recombination_delta_temp;		/**< Gas temperature perturbation */
   int index_tp_perturbed_recombination_delta_chi;		/**< Inionization fraction perturbation */
 
@@ -300,6 +305,7 @@ struct perturbs
   int index_tp_theta_ur;   /**< index value for theta of ultra-relativistic neutrinos/relics */
   int index_tp_theta_dr;   /**< index value for F1 of decay radiation */
   int index_tp_theta_ncdm1;/**< index value for theta of first non-cold dark matter species (e.g. massive neutrinos) */
+  int index_tp_theta_dncdm;/**< index value for theta of decaying non-cold dark matter species */
 
   int index_tp_phi;          /**< index value for metric fluctuation phi */
   int index_tp_phi_prime;    /**< index value for metric fluctuation phi' */
@@ -427,9 +433,14 @@ struct perturb_vector
   int index_pt_F0_dr;
   int l_max_dr;          /**< max momentum in Boltzmann hierarchy for dr) */
   int index_pt_psi0_ncdm1; /**< first multipole of perturbation of first ncdm species, Psi_0 */
+
   int N_ncdm;		/**< number of distinct non-cold-dark-matter (ncdm) species */
   int* l_max_ncdm;	/**< mutipole l at which Boltzmann hierarchy is truncated (for each ncdm species) */
   int* q_size_ncdm;	/**< number of discrete momenta (for each ncdm species) */
+
+  int index_pt_psi0_dncdm; /**< first multipole of perturbation of first decaying ncdm species, Psi_0 */
+  int l_max_dncdm;	/**< mutipole l at which Boltzmann hierarchy is truncated (for decaying ncdm) */
+  int q_size_dncdm;	/**< number of discrete momenta (for decaying ncdm species) */
 
   int index_pt_eta;       /**< synchronous gauge metric perturbation eta*/
   int index_pt_phi;	      /**< newtonian gauge metric perturbation phi */
@@ -512,6 +523,11 @@ struct perturb_workspace
   double * theta_ncdm;	/**< velocity divergence theta of each ncdm species */
   double * shear_ncdm;	/**< shear for each ncdm species */
 
+  double delta_dncdm;	/**< relative density perturbation of decaying ncdm species */
+  double theta_dncdm;	/**< velocity divergence theta of decaying ncdm species */
+  double shear_dncdm;	/**< shear for decaying ncdm species */
+
+
   double delta_m;	/**< relative density perturbation of all non-relativistic species */
   double theta_m;	/**< velocity divergence theta of all non-relativistic species */
 
@@ -547,6 +563,7 @@ struct perturb_workspace
   int index_ap_rsa; /**< index for radiation streaming approximation */
   int index_ap_ufa; /**< index for ur fluid approximation */
   int index_ap_ncdmfa; /**< index for ncdm fluid approximation */
+  int index_ap_dncdmfa; /**< index for dncdm fluid approximation */
   int ap_size;      /**< number of relevant approximations for a given mode */
 
   int * approx;     /**< array of approximation flags holding at a given time: approx[index_ap] */
