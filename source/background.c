@@ -1589,7 +1589,7 @@ int background_dncdm_init(
 			   pba->error_message),
 	pba->error_message,
 	pba->error_message);
-    printf("pba->q_size_dncdm in bg = %d\n",pba->q_size_dncdm);
+    //printf("pba->q_size_dncdm in bg = %d\n",pba->q_size_dncdm);
 
     pba->q_dncdm=realloc(pba->q_dncdm,pba->q_size_dncdm*sizeof(double));
     pba->w_dncdm=realloc(pba->w_dncdm,pba->q_size_dncdm*sizeof(double));
@@ -2539,6 +2539,7 @@ int background_output_titles(struct background * pba,
   class_store_columntitle(titles,"(.)rho_dcdm",pba->has_dcdm);
   class_store_columntitle(titles,"(.)rho_dr",pba->has_dr);
 
+  class_store_columntitle(titles,"(.)n_dncdm",pba->has_dncdm);
   class_store_columntitle(titles,"(.)rho_dncdm",pba->has_dncdm);
   class_store_columntitle(titles,"(.)p_dncdm",pba->has_dncdm);
 
@@ -2594,6 +2595,7 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dcdm],pba->has_dcdm,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dr],pba->has_dr,storeidx);
 
+    class_store_double(dataptr,pvecback[pba->index_bg_n_dncdm],pba->has_dncdm,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_dncdm],pba->has_dncdm,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_dncdm],pba->has_dncdm,storeidx);
 

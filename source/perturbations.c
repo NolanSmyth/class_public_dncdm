@@ -4113,9 +4113,13 @@ int perturb_vector_init(
             //Jump to next momentum bin in ppw->pv->y:
             index_pt += (ppw->pv->l_max_dncdm+1);
           }
+
+          f0_norm *= factor;
+
           ppv->y[ppv->index_pt_psi0_dncdm] *=factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm)/ppw->pvecback[pba->index_bg_rho_dncdm];
           ppv->y[ppv->index_pt_psi0_dncdm+1] *=k*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm)/rho_plus_p_dncdm;
           ppv->y[ppv->index_pt_psi0_dncdm+2] *=2.0/3.0*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm)/rho_plus_p_dncdm;
+          /*
           printf("After approx switch, delta, theta, sigma = %e, %e, %e\n",ppv->y[ppv->index_pt_psi0_dncdm],ppv->y[ppv->index_pt_psi0_dncdm+1],ppv->y[ppv->index_pt_psi0_dncdm+2]);
           if (ppv->y[ppv->index_pt_psi0_dncdm] > 1e12)
           {
@@ -4129,6 +4133,7 @@ int perturb_vector_init(
               printf("-> q, 0, 1, 2 = %e %e %e %e\n",q, ppw->pv->y[index_pt],ppw->pv->y[index_pt+1],ppw->pv->y[index_pt+2]); 
             }
           } 
+          */
 
           if (pba->has_ncdm == _TRUE_) {
             index_pt = 0;
@@ -5571,6 +5576,7 @@ int perturb_einstein(
         - 2. * a_prime_over_a * ppw->pvecmetric[ppw->index_mt_alpha]
         + y[ppw->pv->index_pt_eta]
         - 4.5 * (a2/k2) * ppw->rho_plus_p_shear;
+      //printf(" -> ppw->pvecmetric[ppw->index_mt_alpha_prime] = %e\n",ppw->pvecmetric[ppw->index_mt_alpha_prime]);
 
     }
 
@@ -5809,12 +5815,17 @@ int perturb_total_stress_energy(
          f = rho_dr*a^4/rho_crit_today. In CLASS density units
          rho_crit_today = H0^2.
       */
+      /* UNCOMMENT
+      */
       rho_dr_over_f = pow(pba->H0/a2,2);
       ppw->delta_rho += rho_dr_over_f*y[ppw->pv->index_pt_F0_dr];
       ppw->rho_plus_p_theta += 4./3.*3./4*k*rho_dr_over_f*y[ppw->pv->index_pt_F0_dr+1];
       ppw->rho_plus_p_shear += 2./3.*rho_dr_over_f*y[ppw->pv->index_pt_F0_dr+2];
       ppw->delta_p += 1./3.*rho_dr_over_f*y[ppw->pv->index_pt_F0_dr];
       rho_plus_p_tot += 4./3. * ppw->pvecback[pba->index_bg_rho_dr];
+
+      //printf(" ->  y[ppw->pv->index_pt_F0_dr], y[ppw->pv->index_pt_F0_dr+1], y[ppw->pv->index_pt_F0_dr+2] = %e %e %e\n", 
+      //printf(" ->  rho_dr_over_f = %e\n", rho_dr_over_f);
     }
     //if ((pba->has_dr == _TRUE_) && (pba->has_dcdm_bg_only == _TRUE_)) {
     //  rho_plus_p_tot += 4./3. * ppw->pvecback[pba->index_bg_rho_dr];
@@ -5963,18 +5974,19 @@ int perturb_total_stress_energy(
         }
         f0_norm *= factor;
 
+        // Manual normalization of the perturbations!
         rho_delta_dncdm *= factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
         rho_plus_p_theta_dncdm *= k*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
         rho_plus_p_shear_dncdm *= 2.0/3.0*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
         delta_p_dncdm *= factor/3.*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
 
-        if ((ppt->has_source_delta_dncdm == _TRUE_) || (ppt->has_source_theta_dncdm == _TRUE_) || (ppt->has_source_delta_m == _TRUE_)) {
-          ppw->delta_dncdm = rho_delta_dncdm/ppw->pvecback[pba->index_bg_rho_dncdm];
-          ppw->theta_dncdm = rho_plus_p_theta_dncdm/
-            (ppw->pvecback[pba->index_bg_rho_dncdm]+ppw->pvecback[pba->index_bg_p_dncdm]);
-          ppw->shear_dncdm = rho_plus_p_shear_dncdm/
-            (ppw->pvecback[pba->index_bg_rho_dncdm]+ppw->pvecback[pba->index_bg_p_dncdm]);
-        }
+        // Store the integrated quantities so they can be used in DR collision terms in perturb_derivs
+        ppw->delta_dncdm = rho_delta_dncdm/ppw->pvecback[pba->index_bg_rho_dncdm];
+        ppw->theta_dncdm = rho_plus_p_theta_dncdm/
+          (ppw->pvecback[pba->index_bg_rho_dncdm]+ppw->pvecback[pba->index_bg_p_dncdm]);
+        ppw->shear_dncdm = rho_plus_p_shear_dncdm/
+          (ppw->pvecback[pba->index_bg_rho_dncdm]+ppw->pvecback[pba->index_bg_p_dncdm]);
+        
 
         ppw->delta_rho += rho_delta_dncdm;
         ppw->rho_plus_p_theta += rho_plus_p_theta_dncdm;
@@ -6481,6 +6493,8 @@ int perturb_sources(
           + ppt->switch_dop * (pvecthermo[pth->index_th_g] * (dy[ppw->pv->index_pt_theta_b]/k/k + pvecmetric[ppw->index_mt_alpha_prime])
                                +pvecthermo[pth->index_th_dg] * (y[ppw->pv->index_pt_theta_b]/k/k + pvecmetric[ppw->index_mt_alpha]));
 
+        //printf(" -> T source components = %e %e %e %e %e\n",  delta_g, pvecmetric[ppw->index_mt_alpha_prime], y[ppw->pv->index_pt_eta], dy[ppw->pv->index_pt_theta_b]);
+
         _set_source_(ppt->index_tp_t1) =
           switch_isw * pvecthermo[pth->index_th_exp_m_kappa] * k * (pvecmetric[ppw->index_mt_alpha_prime]
                                                                     + 2. * a_prime_over_a * pvecmetric[ppw->index_mt_alpha]
@@ -6832,7 +6846,7 @@ int perturb_print_variables(double tau,
   double delta_temp=0., delta_chi=0.;
   /** - dncdm sector begins */
   double delta_dncdm, theta_dncdm, shear_dncdm, delta_p_over_delta_rho_dncdm;
-  double rho_dncdm_bg, p_dncdm_bg, pseudo_p_dncdm, w_dncdm;
+  double rho_dncdm_bg, p_dncdm_bg, pseudo_p_dncdm, w_dncdm, f0_norm;
   double rho_delta_dncdm = 0.0;
   double rho_plus_p_theta_dncdm = 0.0;
   double rho_plus_p_shear_dncdm = 0.0;
@@ -7077,12 +7091,17 @@ int perturb_print_variables(double tau,
         delta_p_dncdm = 0.0;
         factor = pba->factor_dncdm*pow(pba->a_today/a,4);
 
+        // We normalize the integrals to include the decay
+        // which is currently NOT computed self-consistently during the evolution
+        // (the integrated b/g quantities include the decay, while the b/g f_0 is just Bose-Einstein)
+        f0_norm = 0.;
         for (index_q=0; index_q < ppw->pv->q_size_dncdm; index_q ++) {
 
           q = pba->q_dncdm[index_q];
           q2 = q*q;
           epsilon = sqrt(q2+pba->M_dncdm*pba->M_dncdm*a2);
 
+          f0_norm += pba->w_dncdm[index_q]*q2*epsilon;
           rho_delta_dncdm += q2*epsilon*pba->w_dncdm[index_q]*y[idx];
           rho_plus_p_theta_dncdm += q2*q*pba->w_dncdm[index_q]*y[idx+1];
           rho_plus_p_shear_dncdm += q2*q2/epsilon*pba->w_dncdm[index_q]*y[idx+2];
@@ -7091,11 +7110,13 @@ int perturb_print_variables(double tau,
           //Jump to next momentum bin:
           idx+=(ppw->pv->l_max_dncdm+1);
         }
+        f0_norm *= factor;
 
-        rho_delta_dncdm *= factor;
-        rho_plus_p_theta_dncdm *= k*factor;
-        rho_plus_p_shear_dncdm *= 2.0/3.0*factor;
-        delta_p_dncdm *= factor/3.;
+        // Manual normalization of the perturbations!
+        rho_delta_dncdm *= factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
+        rho_plus_p_theta_dncdm *= k*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
+        rho_plus_p_shear_dncdm *= 2.0/3.0*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
+        delta_p_dncdm *= factor/3.*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
 
         delta_dncdm = rho_delta_dncdm/ppw->pvecback[pba->index_bg_rho_dncdm];
         theta_dncdm = rho_plus_p_theta_dncdm/
@@ -7238,17 +7259,17 @@ int perturb_print_variables(double tau,
         class_store_double(dataptr, delta_p_over_delta_rho_ncdm[n_ncdm],  _TRUE_, storeidx);
       }
     }
+    /* Decaying cold dark matter */
+    if ((pba->has_dcdm == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)){
+      class_store_double(dataptr, delta_dcdm, pba->has_dcdm, storeidx);
+      class_store_double(dataptr, theta_dcdm, pba->has_dcdm, storeidx);
+    }
     /* Decaying Non-cold Dark Matter */
     if ((pba->has_dncdm == _TRUE_) && ((ppt->has_density_transfers == _TRUE_) || (ppt->has_velocity_transfers == _TRUE_) || (ppt->has_source_delta_m == _TRUE_))) {
       class_store_double(dataptr, delta_dncdm, pba->has_dncdm, storeidx);
       class_store_double(dataptr, theta_dncdm, pba->has_dncdm, storeidx);
       class_store_double(dataptr, shear_dncdm, pba->has_dncdm, storeidx);
       class_store_double(dataptr, delta_p_over_delta_rho_dncdm,  pba->has_dncdm, storeidx);
-    }
-    /* Decaying cold dark matter */
-    if ((pba->has_dcdm == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)){
-      class_store_double(dataptr, delta_dcdm, pba->has_dcdm, storeidx);
-      class_store_double(dataptr, theta_dcdm, pba->has_dcdm, storeidx);
     }
     /* Decay radiation */
     if ((pba->has_dr == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)){
@@ -7259,7 +7280,6 @@ int perturb_print_variables(double tau,
     /* Scalar field scf*/
     class_store_double(dataptr, delta_scf, pba->has_scf, storeidx);
     class_store_double(dataptr, theta_scf, pba->has_scf, storeidx);
-
 
   }
   /** - for tensor modes: */
@@ -7892,14 +7912,15 @@ int perturb_derivs(double tau,
 
       f_dr = pow(pow(a/pba->a_today,2)/pba->H0,2)*pvecback[pba->index_bg_rho_dr];
       // NEEDS TO BE FIXED: This rho_dncdm shoud really be m*n_dncdm
-      fprime_dr = pba->Gamma_dncdm*pvecback[pba->index_bg_rho_dncdm]*pow(a,5)/pow(pba->H0,2);
+      //fprime_dr = pba->Gamma_dncdm*pvecback[pba->index_bg_rho_dncdm]*pow(a,5)/pow(pba->H0,2);
+      //fprime_dr = pba->Gamma_dncdm*(pba->m_dncdm_in_eV/_eV_Mpc_)*pvecback[pba->index_bg_n_dncdm]*pow(a,5)/pow(pba->H0,2);
+      fprime_dr = pba->Gamma_dncdm*pba->M_dncdm*pvecback[pba->index_bg_n_dncdm]*pow(a,5)/pow(pba->H0,2);
 
       //delta_dncdm and theta_dncdm should have been computed when calling perturb_einstein at the beginning of this function 
       /** - ----> dr F0 */
       // NEEDS TO BE FIXED: This delta_dncdm should really be delta n/n
       dy[pv->index_pt_F0_dr] = -k*y[pv->index_pt_F0_dr+1]-4./3.*metric_continuity*f_dr+
         fprime_dr*(ppw->delta_dncdm + metric_euler/k2); //(y[pv->index_pt_delta_dncdm]+metric_euler/k2);
-      //printf("-> ppw->delta_dncdm = %e\n",ppw->delta_dncdm);
       /** - ----> dr F1 */
       // NEEDS TO BE FIXED: The collision terms for all DR multipoles are not right! 
       dy[pv->index_pt_F0_dr+1] = k/3.*y[pv->index_pt_F0_dr]-2./3.*k*y[pv->index_pt_F0_dr+2]*s2_squared +

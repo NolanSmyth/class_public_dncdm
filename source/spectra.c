@@ -3874,7 +3874,7 @@ int spectra_matter_transfers(
 
         if (pba->has_dncdm == _TRUE_) {
 
-          rho_i = pvecback_sp_long[pba->index_bg_rho_ncdm1+n_ncdm];
+          rho_i = pvecback_sp_long[pba->index_bg_rho_dncdm];
 
           if (ppt->has_source_delta_dncdm == _TRUE_) {
 
