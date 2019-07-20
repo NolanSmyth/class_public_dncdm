@@ -75,7 +75,7 @@ endif
 %.o:  %.c .base
 	cd $(WRKDIR);$(CC) $(OPTFLAG) $(OMPFLAG) $(CCFLAG) $(INCLUDES) -c ../$< -o $*.o
 
-TOOLS = growTable.o dei_rkck.o sparse.o evolver_rkck.o  evolver_ndf15.o arrays.o parser.o quadrature.o hyperspherical.o common.o
+TOOLS = growTable.o dei_rkck.o sparse.o evolver_rkck.o  evolver_ndf15.o arrays.o parser.o quadrature.o hyperspherical.o common.o pseudo_spectral.o
 
 SOURCE = input.o background.o thermodynamics.o perturbations.o primordial.o nonlinear.o transfer.o spectra.o lensing.o
 
@@ -131,6 +131,10 @@ TEST_BACKGROUND_DNCDM = test_background_dncdm.o
 
 TEST_PERTURBATIONS_DNCDM = test_perturbations_dncdm.o
 
+TEST_PSEUDO_SPECTRAL = test_pseudo_spectral.o
+
+TEST_WELFERT = test_welfert.o
+
 C_TOOLS =  $(addprefix tools/, $(addsuffix .c,$(basename $(TOOLS))))
 C_SOURCE = $(addprefix source/, $(addsuffix .c,$(basename $(SOURCE) $(OUTPUT))))
 C_TEST = $(addprefix test/, $(addsuffix .c,$(basename $(TEST_DEGENERACY) $(TEST_LOOPS) $(TEST_TRANSFER) $(TEST_NONLINEAR) $(TEST_PERTURBATIONS) $(TEST_THERMODYNAMICS))))
@@ -155,7 +159,6 @@ test_sigma: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(TEST_SIGMA)
 
 test_spectra: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(TEST_SPECTRA)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o test_spectra $(addprefix build/,$(notdir $^)) -lm
-
 
 test_loops: $(TOOLS) $(SOURCE) $(EXTERNAL) $(OUTPUT) $(TEST_LOOPS)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o $@ $(addprefix build/,$(notdir $^)) -lm
@@ -191,6 +194,12 @@ test_background_dncdm: $(TOOLS) $(SOURCE) $(EXTERNAL) $(TEST_BACKGROUND_DNCDM)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o  $@ $(addprefix build/,$(notdir $^)) -lm
 
 test_perturbations_dncdm: $(TOOLS) $(SOURCE) $(EXTERNAL) $(TEST_PERTURBATIONS_DNCDM)
+	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o  $@ $(addprefix build/,$(notdir $^)) -lm
+
+test_pseudo_spectral: $(TOOLS) $(TEST_PSEUDO_SPECTRAL)
+	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o  $@ $(addprefix build/,$(notdir $^)) -lm
+
+test_welfert: $(TOOLS) $(TEST_WELFERT)
 	$(CC) $(OPTFLAG) $(OMPFLAG) $(LDFLAG) -o  $@ $(addprefix build/,$(notdir $^)) -lm
 
 tar: $(C_ALL) $(C_TEST) $(H_ALL) $(PRE_ALL) $(INI_ALL) $(MISC_FILES) $(HYREC) $(PYTHON_FILES)

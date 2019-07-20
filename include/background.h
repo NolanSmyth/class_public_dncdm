@@ -227,6 +227,8 @@ struct background
   int index_bg_p_dncdm;       /**< pressure of Decaying Non-Cold DM species */
   int index_bg_n_dncdm;       /**< number debsity of Decaying Non-Cold DM species */
   int index_bg_pseudo_p_dncdm;/**< another statistical momentum useful in ncdma approximation from 1104.2935*/
+  int index_bg_lnf_dncdm;     /**< index of the first q-bin of logarithm of the q-dependent phase space distribution of the DNCDM */
+  int index_bg_dlnf_dlnq_dncdm;     /**< index of the first q-bin of dlnf/dlnq of the DNCDM, evaluated on the bg q-grid */
 
   int index_bg_Omega_r;       /**< relativistic density fraction (\f$ \Omega_{\gamma} + \Omega_{\nu r} \f$) */
 
@@ -286,6 +288,8 @@ struct background
   int index_bi_a;       /**< {B} scale factor */
   int index_bi_rho_dcdm;/**< {B} dcdm density */
   int index_bi_rho_dncdm;/**< {B} dncdm density */
+  int index_bi_lnf_dncdm;/**< {B} index of the first q-bin of logarithm of the q-dependent phase space distribution of the DNCDM */
+  int index_bi_dlnf_dlnq_dncdm;/**< {B} index of the first q-bin of d lnf/dlnq of the q-dependent phase space distribution of the DNCDM */
   int index_bi_rho_dr;  /**< {B} dr density */
   int index_bi_rho_fld; /**< {B} fluid density */
   int index_bi_phi_scf;       /**< {B} scalar field value */
@@ -360,6 +364,7 @@ struct background
   double * w_dncdm_bg;  /**< Pointers to vector of corresponding quadrature weights w */
   double * q_dncdm;     /**< Pointers to vector of perturbation sampling in q */
   double * w_dncdm;     /**< Pointers to vector of corresponding quadrature weights w */
+  double * diff_mat_dncdm_bg;     /**< Pointer to the differentiation matrix used to compute df/dq */
   double * dlnf0_dlnq_dncdm; /**< Pointers to vectors of logarithmic derivatives of p-s-d */
   int q_size_dncdm_bg; /**< Size of the q_ncdm_bg array */
   int q_size_dncdm;    /**< Size of the q_ncdm array */
@@ -502,6 +507,7 @@ extern "C" {
   int background_dncdm_distribution(
 				  void *pba,
 				  double q,
+				  int der,
 				  double * f0
 				  );
 
@@ -521,6 +527,19 @@ extern "C" {
 			    struct background *pba
 			    );
 
+  int background_dncdm_momenta(
+                             double * lnfvec,
+                             double * qvec,
+                             double * wvec,
+                             int qsize,
+                             double M,
+                             double factor,
+                             double z,
+                             double * n,
+	           	             double * rho,
+                             double * p,
+			                 double * pseudo_p
+                             );
 
   int background_ncdm_momenta(
                              double * qvec,

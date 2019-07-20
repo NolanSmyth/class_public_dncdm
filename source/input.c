@@ -845,8 +845,8 @@ int input_read_parameters(
     }
 
     /* Given the degeneracy parameter and initial energy density we can solve for the temperature, 
-     * assuming the Decaying NCDM is thermal */
-    pba->T_dncdm = pow(pba->Omega_ini_dncdm/pba->Omega0_g/pba->deg_dncdm,0.25);
+     * assuming the Decaying NCDM is thermal; This assumes that DNCDM is a fermion */
+    pba->T_dncdm = pow((8./7.)*pba->Omega_ini_dncdm/pba->Omega0_g/pba->deg_dncdm,0.25);
     if (input_verbose > 0) printf(" -> Evaluated decaying NCDM temperature, relative to photons to be T_dncdm = %e\n",pba->T_dncdm);
 
     /* precision parameters from the ncdm module*/

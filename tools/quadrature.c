@@ -4,6 +4,71 @@
 /* Thomas Tram                            */
 /******************************************/
 #include "quadrature.h"
+#include "pseudo_spectral.h"
+
+// Evaluate the first derivative matrix for the Laguerre-based 
+// collocation scheme below. The q derivative of f at the 
+// collocation points is then obtained by df/dq (q_i) = D_{ij} f_j 
+int get_differentiation_matrix(double *x, double *d, int n, ErrorMsg errmsg)
+{
+
+  int m = 1; // order of the derivative
+  double *c;
+
+  // Note that c stores the derivative matrix, but also the cardinal/interpolation 
+  // functions, so its size is n*(m+1).
+  class_alloc(c, n*(m+1)*sizeof(double), errmsg);
+  
+  for (int i = 0; i < n; i++)
+  {
+    class_call(get_cardinal_and_diff_matrix(x[i], x, c, n, m+1),
+            errmsg,
+            errmsg);
+
+    for (int j = 0; j < n; j++)
+    {
+      d[i*n + j] = c[j*(m+1) + 1]; 
+      // The Laguerre collocation scheme involves weights in the polynomial expansion
+      // that must be differentiated along with the polynomials, which gives rise 
+      // to additional factors.
+      if (i == j)
+        d[i*n + j] += -1./2.;
+      d[i*n + j] *= exp(-(x[i]-x[j])/2.);
+    }
+  }
+
+ return _SUCCESS_; 
+}
+
+// Compute the Laguerre collocation points and weights to be used with a Laguerre-pseudo-spectral 
+// method, and Gauss-Laguerre quadrature
+// The collocation points/abcissas include the origin (which is not part of the 
+// standard Gauss-Laguerre integration scheme), so it is assigned a weight of 0.
+int get_qsampling_laguerre(double *x,
+             double *w,
+             int N,
+             ErrorMsg errmsg){
+
+  //double *b, *c;
+  /* Allocate storage for Laguerre coefficients: */
+  //class_alloc(b,N*sizeof(double),errmsg);
+  //class_alloc(c,N*sizeof(double),errmsg);
+  //compute_Laguerre(x,w,N,0.0,b,c,_TRUE_);
+
+  //free(b);
+  //free(c);
+  
+  x[0] = 0.0;
+  w[0] = 0.0;
+
+  // Compute the Laguerre quadrature abcissas (also the interior collocation points) and weights.
+  // Fill the last N-1 entries of the arrays
+  class_call(gaulag(&x[0], &w[0], N-1, 0),
+            errmsg,
+            errmsg);
+
+  return _SUCCESS_;
+}
 
 int get_qsampling_manual(double *x,
 			 double *w,
@@ -570,7 +635,10 @@ int compute_Hermite(double *x, double *w, int N, int alpha, double *b, double *c
   return _SUCCESS_;
 }
 
-
+/* Compute Laguerre abcissas and weights;
+ * The weights are actually ww_i = w_i exp(x_i), so that a Gauss-Laguerre integration of a function 
+ * f(x) is Int( f(x) dx ) = Int( f(x) e^-x e^+x dx)  = Sum( w_i f(x_i) exp(x_i) ) = Sum (ww_i f(x_i) ) 
+ */
 int compute_Laguerre(double *x, double *w, int N, double alpha, double *b, double *c,int totalweight){
   int i,j,iter,maxiter=10;
   double x0=0.,r1,r2,ratio,d,logprod,logcc;
@@ -609,12 +677,12 @@ int compute_Laguerre(double *x, double *w, int N, double alpha, double *b, doubl
       p2 = x0 - alpha - 1.0;
       dp2 = 1.0;
       for (j=1; j<N; j++ ){
-	p0 = p1;
-	dp0 = dp1;
-	p1 = p2;
-	dp1 = dp2;
-	p2  = (x0-b[j])*p1 - c[j]*p0;
-	dp2 = (x0-b[j])*dp1 + p1 - c[j]*dp0;
+        p0 = p1;
+        dp0 = dp1;
+        p1 = p2;
+        dp1 = dp2;
+        p2  = (x0-b[j])*p1 - c[j]*p0;
+        dp2 = (x0-b[j])*dp1 + p1 - c[j]*dp0;
       }
       /* New guess at root: */
       d = p2/dp2;

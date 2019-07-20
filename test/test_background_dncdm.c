@@ -27,7 +27,6 @@ int main(int argc, char **argv) {
     printf("\n\nError running input_init_from_arguments \n=>%s\n",errmsg); 
     return _FAILURE_;
   }
-
   if (background_init(&pr,&ba) == _FAILURE_) {
     printf("\n\nError running background_init \n=>%s\n",ba.error_message);
     return _FAILURE_;
@@ -38,7 +37,7 @@ int main(int argc, char **argv) {
 
   int index_tau;
 
-  FILE *fptr = fopen("test.dat", "w"); 
+  FILE *fptr = fopen("output/bg_dncdm_test.dat", "w"); 
 
   double tau_at_z, Omega_dncdm, rho_c;
 
@@ -51,7 +50,11 @@ int main(int argc, char **argv) {
    * The former involves the relativistic energy density, while the latter involves the number density
    */
   // This is only correct if Gamma = 0!
+  // Bose-Einstein distribution
   Omega_dncdm = (8./7.)*(3./4.)*ba.background_table[(ba.bt_size-1)*ba.bg_size + ba.index_bg_rho_dncdm]/pow(ba.H0,2); 
+  // FD Distribution
+  Omega_dncdm = ba.background_table[(ba.bt_size-1)*ba.bg_size + ba.index_bg_rho_dncdm]/pow(ba.H0,2); 
+
   printf(" -> decaying non-cold dark matter species has m = %e eV (so m / omega =%e eV)\n",
              ba.m_dncdm_in_eV,
              ba.m_dncdm_in_eV/Omega_dncdm/ba.h/ba.h);
@@ -68,6 +71,7 @@ int main(int argc, char **argv) {
 	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_a],
 	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_H]);
     */
+    /*
     fprintf(fptr,//stdout,
 	    "%e     %e     %e     %e     %e\n",
 	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_a],
@@ -76,6 +80,21 @@ int main(int argc, char **argv) {
 	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_rho_dr], 
 	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_rho_ur]      
         );
+    */
+    fprintf(fptr,//stdout,
+	    "%e     %e     %e     %e     %e     %e     ",
+	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_a],
+	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_rho_dncdm],
+	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_p_dncdm],
+	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_n_dncdm]*ba.M_dncdm,
+	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_rho_dr], 
+	    ba.background_table[index_tau*ba.bg_size+ba.index_bg_rho_ur]      
+        );
+    for (int index_q = 0; index_q < ba.q_size_dncdm_bg; index_q++)
+      fprintf(fptr, "%e     ", exp(ba.background_table[index_tau*ba.bg_size+ba.index_bg_lnf_dncdm + index_q]));
+    for (int index_q = 0; index_q < ba.q_size_dncdm_bg; index_q++)
+      fprintf(fptr, "%e     ", ba.background_table[index_tau*ba.bg_size+ba.index_bg_dlnf_dlnq_dncdm + index_q]);
+    fprintf(fptr,"\n");
   }
   fclose(fptr);
 

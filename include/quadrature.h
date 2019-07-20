@@ -31,6 +31,15 @@ typedef struct adaptive_integration_tree_node{
 #ifdef __cplusplus
     extern "C" {
 #endif
+
+      int get_differentiation_matrix(double *x, 
+                                     double *d, 
+                                     int n, 
+                                     ErrorMsg errmsg);
+      int get_qsampling_laguerre(double *x,
+             double *w,
+             int N,
+             ErrorMsg errmsg);
       int get_qsampling(double *x,
 			double *w,
 			int *N,
