@@ -419,6 +419,15 @@ int background_functions(
       pvecback[pba->index_bg_dlnf_dlnq_dncdm + index_q] = dlnf_dlnq;
     }
 
+    // Interpolate the solutions for the lnf and dlnf/dlnq on the perturbation q grid
+    for (int index_q = 0; index_q < pba->q_size_dncdm; index_q++)
+    {
+      double q = pba->q_dncdm[index_q];
+
+      pvecback[pba->index_bg_lnf_pt_dncdm + index_q] = linear_interp(pba->q_dncdm_bg, &pvecback[pba->index_bg_lnf_dncdm], pba->q_size_dncdm_bg, q);
+      pvecback[pba->index_bg_dlnf_dlnq_pt_dncdm + index_q] = linear_interp(pba->q_dncdm_bg, &pvecback[pba->index_bg_dlnf_dlnq_dncdm], pba->q_size_dncdm_bg, q);
+    }
+
     //printf(" -> a, rho_dncdm, n_dncdm, p_dncdm = %e, %e, %e, %e\n", a_rel, pvecback[pba->index_bg_rho_dncdm], pvecback[pba->index_bg_n_dncdm], pvecback[pba->index_bg_p_dncdm]);
     /* (3 p_dncdm) is the "relativistic" contribution to rho_dncdm */
 
@@ -1027,6 +1036,8 @@ int background_indices(
   class_define_index(pba->index_bg_pseudo_p_dncdm,pba->has_dncdm,index_bg,1);
   class_define_index(pba->index_bg_lnf_dncdm,pba->has_dncdm,index_bg,pba->q_size_dncdm_bg);
   class_define_index(pba->index_bg_dlnf_dlnq_dncdm,pba->has_dncdm,index_bg,pba->q_size_dncdm_bg);
+  class_define_index(pba->index_bg_lnf_pt_dncdm,pba->has_dncdm,index_bg,pba->q_size_dncdm);
+  class_define_index(pba->index_bg_dlnf_dlnq_pt_dncdm,pba->has_dncdm,index_bg,pba->q_size_dncdm);
 
   /* - index for dcdm */
   class_define_index(pba->index_bg_rho_dcdm,pba->has_dcdm,index_bg,1);
@@ -1662,11 +1673,22 @@ int background_dncdm_init(
   class_alloc(pba->q_dncdm,pba->q_size_dncdm*sizeof(double),pba->error_message);
   class_alloc(pba->w_dncdm,pba->q_size_dncdm*sizeof(double),pba->error_message);
 
+  // Get the collocation points/q values on which the distribution is evaluated
+  class_call(get_qsampling_laguerre(pba->q_dncdm,
+                  pba->w_dncdm,
+                  pba->q_size_dncdm,
+                  pba->error_message),
+             pba->error_message,
+             pba->error_message);
+
   //printf("q_size_dncdm_bg = %d\n",pba->q_size_dncdm_bg);
   //printf("q_size_dncdm = %d\n",pba->q_size_dncdm);
 
   for (int i = 0; i < pba->q_size_dncdm_bg; i++)
-    printf("-> dncdm_init: q, w = %e %e\n", pba->q_dncdm_bg[i],pba->w_dncdm_bg[i]);
+    printf("-> b/g sampling: q, w = %e %e\n", pba->q_dncdm_bg[i],pba->w_dncdm_bg[i]);
+
+  for (int i = 0; i < pba->q_size_dncdm; i++)
+    printf("-> pt sampling: q, w = %e %e\n", pba->q_dncdm[i],pba->w_dncdm[i]);
 
   printf("-> dncdm_init: first derivative matrix: \n");
   for (int i = 0; i < pba->q_size_dncdm_bg; i++){
@@ -2395,7 +2417,7 @@ int background_initial_conditions(
       epsilon = sqrt(q2+pba->M_dncdm*pba->M_dncdm*a*a);
       background_dncdm_distribution(&pbadist, q, 0, &pvecback_integration[idx]);
       pvecback_integration[idx] = log(pvecback_integration[idx]);
-      printf("q, f = %e %e\n",q, pvecback_integration[idx]);
+      //printf("q, f = %e %e\n",q, pvecback_integration[idx]);
     }
 
     // Initialize the values of dlnf/dlnq to the dncdm function in each q bin
@@ -2406,7 +2428,7 @@ int background_initial_conditions(
       q = pba->q_dncdm_bg[index_q];
       background_dncdm_distribution(&pbadist, q, 1, &pvecback_integration[idx]);
       pvecback_integration[idx] = pvecback_integration[idx];
-      printf("q, f = %e %e\n",q, pvecback_integration[idx]);
+      //printf("q, f = %e %e\n",q, pvecback_integration[idx]);
     }
 
     /** - We must add the relativistic contribution from NCDM species */

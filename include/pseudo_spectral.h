@@ -1,3 +1,5 @@
+#pragma once
+
 #include "common.h"
 
 int get_cardinal_and_diff_matrix(double x, double *xi, double *c, int n, int m);

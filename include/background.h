@@ -9,6 +9,7 @@
 #include "arrays.h"
 #include "dei_rkck.h"
 #include "parser.h"
+#include "linear_interp.h"
 
 /** list of possible types of spatial curvature */
 
@@ -229,6 +230,8 @@ struct background
   int index_bg_pseudo_p_dncdm;/**< another statistical momentum useful in ncdma approximation from 1104.2935*/
   int index_bg_lnf_dncdm;     /**< index of the first q-bin of logarithm of the q-dependent phase space distribution of the DNCDM */
   int index_bg_dlnf_dlnq_dncdm;     /**< index of the first q-bin of dlnf/dlnq of the DNCDM, evaluated on the bg q-grid */
+  int index_bg_lnf_pt_dncdm;     /**< index of the first q-bin b/g lnf interpolated over the perturbation q-grid */
+  int index_bg_dlnf_dlnq_pt_dncdm;     /**< index of the first q-bin of dlnf/dlnq of the DNCDM, evaluated on the perturbation q-grid */
 
   int index_bg_Omega_r;       /**< relativistic density fraction (\f$ \Omega_{\gamma} + \Omega_{\nu r} \f$) */
 

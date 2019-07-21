@@ -94,6 +94,10 @@ int main(int argc, char **argv) {
       fprintf(fptr, "%e     ", exp(ba.background_table[index_tau*ba.bg_size+ba.index_bg_lnf_dncdm + index_q]));
     for (int index_q = 0; index_q < ba.q_size_dncdm_bg; index_q++)
       fprintf(fptr, "%e     ", ba.background_table[index_tau*ba.bg_size+ba.index_bg_dlnf_dlnq_dncdm + index_q]);
+    for (int index_q = 0; index_q < ba.q_size_dncdm; index_q++)
+      fprintf(fptr, "%e     ", exp(ba.background_table[index_tau*ba.bg_size+ba.index_bg_lnf_pt_dncdm + index_q]));
+    for (int index_q = 0; index_q < ba.q_size_dncdm; index_q++)
+      fprintf(fptr, "%e     ", ba.background_table[index_tau*ba.bg_size+ba.index_bg_dlnf_dlnq_pt_dncdm + index_q]);
     fprintf(fptr,"\n");
   }
   fclose(fptr);
