@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     printf("\n\nError in perturb_init \n=>%s\n",pt.error_message);
     return _FAILURE_;
   }
+  exit(0);
 
   if (pt.has_perturbations == _TRUE_) {
 

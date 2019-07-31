@@ -47,6 +47,7 @@ int get_differentiation_matrix(double *x, double *d, int n, ErrorMsg errmsg)
 int get_qsampling_laguerre(double *x,
              double *w,
              int N,
+             int include_zero,
              ErrorMsg errmsg){
 
   //double *b, *c;
@@ -57,16 +58,29 @@ int get_qsampling_laguerre(double *x,
 
   //free(b);
   //free(c);
+
+  if (include_zero == 1)
+  { 
+    x[0] = 0.0;
+    w[0] = 0.0;
+    // Compute the Laguerre quadrature abcissas (also the interior collocation points) and weights.
+    // Fill the last N-1 entries of the arrays
+    class_call(gaulag(&x[1], &w[1], N-1, 0),
+              errmsg,
+              errmsg);
+    //for (int i = 0; i < N; i++)
+    //  printf("x = %e\n",x[i]);
+  }
+  else
+  {
+    class_call(gaulag(x, w, N, 0),
+              errmsg,
+              errmsg);
+    //for (int i = 0; i < N; i++)
+    //  printf("x = %e\n",x[i]);
+  }
+
   
-  x[0] = 0.0;
-  w[0] = 0.0;
-
-  // Compute the Laguerre quadrature abcissas (also the interior collocation points) and weights.
-  // Fill the last N-1 entries of the arrays
-  class_call(gaulag(&x[0], &w[0], N-1, 0),
-            errmsg,
-            errmsg);
-
   return _SUCCESS_;
 }
 

@@ -1113,6 +1113,76 @@ cdef class Class:
 
         return f
 
+    def lnf_dncdm(self, z):
+        """
+        lnf_dncdm
+
+        Parameters
+        ----------
+        z : float
+                Desired redshift
+        """
+        cdef double tau
+        cdef int last_index #junk
+        cdef double * pvecback
+
+        pvecback = <double*> calloc(self.ba.bg_size,sizeof(double))
+
+        if background_tau_of_z(&self.ba,z,&tau)==_FAILURE_:
+            raise CosmoSevereError(self.ba.error_message)
+
+        if background_at_tau(&self.ba,tau,self.ba.long_info,self.ba.inter_normal,&last_index,pvecback)==_FAILURE_:
+            raise CosmoSevereError(self.ba.error_message)
+
+        q_size = self.ba.q_size_dncdm_bg
+        lnf = np.zeros(q_size, dtype=np.double)
+        for index_q in range(q_size):
+            lnf[index_q] = pvecback[self.ba.index_bg_lnf_dncdm + index_q]
+
+        free(pvecback)
+
+        return lnf
+
+    def q_grid_bg(self):
+        q_size = self.ba.q_size_dncdm_bg
+        q_grid = np.zeros(q_size, dtype=np.double)
+        for index_q in range(q_size):
+            q_grid[index_q] = self.ba.q_dncdm_bg[index_q] 
+        return q_grid
+
+    def w_dncdm(self, z):
+        """
+        w_dncdm
+
+        Parameters
+        ----------
+        z : float
+                Desired redshift
+        """
+        cdef double tau
+        cdef int last_index #junk
+        cdef double * pvecback
+
+        pvecback = <double*> calloc(self.ba.bg_size,sizeof(double))
+
+        if background_tau_of_z(&self.ba,z,&tau)==_FAILURE_:
+            raise CosmoSevereError(self.ba.error_message)
+
+        if background_at_tau(&self.ba,tau,self.ba.long_info,self.ba.inter_normal,&last_index,pvecback)==_FAILURE_:
+            raise CosmoSevereError(self.ba.error_message)
+
+        rho_dncdm = pvecback[self.ba.index_bg_rho_dncdm]
+        p_dncdm = pvecback[self.ba.index_bg_p_dncdm]
+
+        free(pvecback)
+
+        if rho_dncdm > 0.:
+            w_dncdm = p_dncdm/rho_dncdm
+        else:
+            w_dncdm = 0.
+
+        return w_dncdm
+
     def Hubble(self, z):
         """
         Hubble(z)

@@ -17,6 +17,7 @@
 #include "arrays.h"
 #include "dei_rkck.h"
 #include "parser.h"
+#include "dncdm_decay_kernel.h"
 
 /* class modules */
 #include "common.h"

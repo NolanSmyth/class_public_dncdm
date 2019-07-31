@@ -69,6 +69,11 @@ cdef extern from "class.h":
         double H_eq # NB addition
         double z_eq # NB addition
         int bt_size
+        int index_bg_lnf_dncdm
+        double * q_dncdm_bg
+        int q_size_dncdm_bg
+        int index_bg_rho_dncdm
+        int index_bg_p_dncdm
 
     cdef struct thermo:
         ErrorMsg error_message

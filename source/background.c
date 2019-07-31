@@ -367,8 +367,6 @@ int background_functions(
                pba->error_message,
                pba->error_message);
 
-    // Note that these quantities do not know about the decay, so this is an approximation
-
     if (rho_dncdm > 0.){
       w_dncdm = p_dncdm/rho_dncdm;
       pseudo_w_dncdm = pseudo_p_dncdm/rho_dncdm;
@@ -384,17 +382,6 @@ int background_functions(
     //printf("-> bg: a, rho_dncdm, p_dncdm = %e %e %e\n",a_rel, rho_dncdm, p_dncdm);
     if (pba->background_verbose > 4)
       printf(" -> a, w_dncdm, pseudo_w_dncdm, mn_over_rho_dncdm = %e, %e, %e, %e\n", a_rel, w_dncdm, pseudo_w_dncdm, mn_over_rho_dncdm);
-
-    /*
-    // OLD: assumed that the psd integrals did not include decay info
-    // Pass value of rho_dncdm to output
-
-    pvecback[pba->index_bg_rho_dncdm] = pvecback_B[pba->index_bi_rho_dncdm];
-    // These 3 quantities are only approximate since they rely on the phase-space distribution
-    pvecback[pba->index_bg_p_dncdm] = w_dncdm*pvecback_B[pba->index_bi_rho_dncdm];
-    pvecback[pba->index_bg_n_dncdm] = mn_over_rho_dncdm*pvecback_B[pba->index_bi_rho_dncdm]/pba->M_dncdm;
-    pvecback[pba->index_bg_pseudo_p_dncdm] = pseudo_w_dncdm*pvecback_B[pba->index_bi_rho_dncdm];
-    */
 
     pvecback[pba->index_bg_rho_dncdm] = rho_dncdm;
     pvecback[pba->index_bg_p_dncdm] = p_dncdm;
@@ -1396,6 +1383,45 @@ int background_dncdm_distribution(
   return _SUCCESS_;
 }
 
+int background_dncdm_distribution_original(
+                                 void * pbadist,
+                                 double q,
+                                 double * f0
+                                 ) {
+  struct background * pba;
+  struct background_parameters_for_distributions * pbadist_local;
+  double ksi;
+  double *param;
+
+  /** - extract from the input structure pbadist all the relevant information */
+  pbadist_local = pbadist;          /* restore actual format of pbadist */
+  pba = pbadist_local->pba;         /* extract the background structure from it */
+  param = pba->dncdm_psd_parameters; /* extract the optional parameter list from it */
+  ksi = pba->ksi_dncdm;      /* extract chemical potential */
+
+  if (_TRUE_)
+  {
+    /**************************************************/
+    /*    FERMI-DIRAC INCLUDING CHEMICAL POTENTIALS   */
+    /**************************************************/
+  
+    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)+1.) +1./(exp(q+ksi)+1.));
+
+  }
+
+  else {
+    printf("-> Possible singularity at q = 0!");
+    /**************************************************/
+    /*    BOSE-EINSTEIN INCLUDING CHEMICAL POTENTIALS   */
+    /**************************************************/
+
+    *f0 = 1.0/pow(2*_PI_,3)*(1./(exp(q-ksi)-1.) +1./(exp(q+ksi)-1.));
+
+  }
+
+  return _SUCCESS_;
+}
+
 /**
  * This function finds optimal quadrature weights for each ncdm
  * species
@@ -1647,7 +1673,7 @@ int background_dncdm_init(
  
   /* Handle qsampling of background distribution and the perturbations: */
 
-  pba->q_size_dncdm_bg = 11;
+  //pba->q_size_dncdm_bg = 11;
   class_alloc(pba->q_dncdm_bg,pba->q_size_dncdm_bg*sizeof(double),pba->error_message);
   class_alloc(pba->w_dncdm_bg,pba->q_size_dncdm_bg*sizeof(double),pba->error_message);
   class_alloc(pba->diff_mat_dncdm_bg,pba->q_size_dncdm_bg*pba->q_size_dncdm_bg*sizeof(double),pba->error_message);
@@ -1656,6 +1682,7 @@ int background_dncdm_init(
   class_call(get_qsampling_laguerre(pba->q_dncdm_bg,
                   pba->w_dncdm_bg,
                   pba->q_size_dncdm_bg,
+                  1, // include the 0 collocation point
                   pba->error_message),
              pba->error_message,
              pba->error_message);
@@ -1669,7 +1696,8 @@ int background_dncdm_init(
             pba->error_message);
   
   /** Get the collocation points/q-sampling on which the perturbations will be evaluated */
-  pba->q_size_dncdm = 4;
+  // Manual sampling
+  //pba->q_size_dncdm = 4;
   class_alloc(pba->q_dncdm,pba->q_size_dncdm*sizeof(double),pba->error_message);
   class_alloc(pba->w_dncdm,pba->q_size_dncdm*sizeof(double),pba->error_message);
 
@@ -1677,12 +1705,36 @@ int background_dncdm_init(
   class_call(get_qsampling_laguerre(pba->q_dncdm,
                   pba->w_dncdm,
                   pba->q_size_dncdm,
+                  0,  // do not include the 0 collocation point
                   pba->error_message),
              pba->error_message,
              pba->error_message);
+  /*
+  // Automatic sampling a la ncdm 
+  class_alloc(pba->q_dncdm,_QUADRATURE_MAX_*sizeof(double),pba->error_message);
+  class_alloc(pba->w_dncdm,_QUADRATURE_MAX_*sizeof(double),pba->error_message);
 
-  //printf("q_size_dncdm_bg = %d\n",pba->q_size_dncdm_bg);
-  //printf("q_size_dncdm = %d\n",pba->q_size_dncdm);
+  // I changed the call signature of background_dncdm_distribution, but ncdm_distribution also returns a Fermi-Dirac thing anyway!
+  class_call(get_qsampling(pba->q_dncdm,
+			   pba->w_dncdm,
+			   &(pba->q_size_dncdm),
+			   _QUADRATURE_MAX_,
+			   ppr->tol_ncdm,
+			   pbadist.q,
+			   pbadist.tablesize,
+			   background_ncdm_test_function,
+			   background_dncdm_distribution_original,
+			   &pbadist,
+			   pba->error_message),
+	 pba->error_message,
+	 pba->error_message);
+  pba->q_dncdm=realloc(pba->q_dncdm,pba->q_size_dncdm*sizeof(double));
+  pba->w_dncdm=realloc(pba->w_dncdm,pba->q_size_dncdm*sizeof(double));
+  
+  printf("After automatic sampling: ");
+  */
+  printf("q_size_dncdm_bg = %d\n",pba->q_size_dncdm_bg);
+  printf("q_size_dncdm = %d\n",pba->q_size_dncdm);
 
   for (int i = 0; i < pba->q_size_dncdm_bg; i++)
     printf("-> b/g sampling: q, w = %e %e\n", pba->q_dncdm_bg[i],pba->w_dncdm_bg[i]);
@@ -1690,13 +1742,13 @@ int background_dncdm_init(
   for (int i = 0; i < pba->q_size_dncdm; i++)
     printf("-> pt sampling: q, w = %e %e\n", pba->q_dncdm[i],pba->w_dncdm[i]);
 
-  printf("-> dncdm_init: first derivative matrix: \n");
-  for (int i = 0; i < pba->q_size_dncdm_bg; i++){
-    for (int j = 0; j < pba->q_size_dncdm_bg; j++){
-      printf("%4.3f    ", pba->diff_mat_dncdm_bg[i*pba->q_size_dncdm_bg + j]); 
-    }
-    printf("\n");
-  }
+  //printf("-> dncdm_init: first derivative matrix: \n");
+  //for (int i = 0; i < pba->q_size_dncdm_bg; i++){
+  //  for (int j = 0; j < pba->q_size_dncdm_bg; j++){
+  //    printf("%4.3f    ", pba->diff_mat_dncdm_bg[i*pba->q_size_dncdm_bg + j]); 
+  //  }
+  //  printf("\n");
+  //}
 
 
   /** - in verbose mode, inform user of number of sampled momenta for background quantities */
@@ -2699,8 +2751,6 @@ int background_output_titles(struct background * pba,
   class_store_columntitle(titles,"(.)n_dncdm",pba->has_dncdm);
   class_store_columntitle(titles,"(.)rho_dncdm",pba->has_dncdm);
   class_store_columntitle(titles,"(.)p_dncdm",pba->has_dncdm);
-  class_store_columntitle(titles,"(.)q_dncdm",pba->has_dncdm);
-  class_store_columntitle(titles,"(.)lnf_dncdm",pba->has_dncdm);
 
   class_store_columntitle(titles,"(.)rho_scf",pba->has_scf);
   class_store_columntitle(titles,"(.)p_scf",pba->has_scf);

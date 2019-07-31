@@ -7,6 +7,8 @@
 #include "evolver_ndf15.h"
 #include "evolver_rkck.h"
 
+#include "dncdm_decay_kernel.h"
+
 #define _scalars_ ((ppt->has_scalars == _TRUE_) && (index_md == ppt->index_md_scalars))
 #define _vectors_ ((ppt->has_vectors == _TRUE_) && (index_md == ppt->index_md_vectors))
 #define _tensors_ ((ppt->has_tensors == _TRUE_) && (index_md == ppt->index_md_tensors))
@@ -523,10 +525,11 @@ struct perturb_workspace
   double * theta_ncdm;	/**< velocity divergence theta of each ncdm species */
   double * shear_ncdm;	/**< shear for each ncdm species */
 
-  double delta_dncdm;	/**< relative density perturbation of decaying ncdm species */
+  double delta_dncdm;	/**< relative energy density perturbation of decaying ncdm species */
   double theta_dncdm;	/**< velocity divergence theta of decaying ncdm species */
   double shear_dncdm;	/**< shear for decaying ncdm species */
-
+  double delta_n_over_n_dncdm;	/**< relative number density perturbation of decaying ncdm species */
+  double * dr_collision_integral_dncdm; /**< values of the collision integrals from DNCDM decay that appear in the DR hierarchy */
 
   double delta_m;	/**< relative density perturbation of all non-relativistic species */
   double theta_m;	/**< velocity divergence theta of all non-relativistic species */
@@ -793,6 +796,9 @@ extern "C" {
                               ErrorMsg error_message
                               );
 
+  int perturb_dncdm_dr_collision_integral(double * y,
+                                          void * parameters_and_workspace
+                                         );
   int perturb_derivs(
                      double tau,
                      double * y,

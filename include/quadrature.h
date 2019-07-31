@@ -39,6 +39,7 @@ typedef struct adaptive_integration_tree_node{
       int get_qsampling_laguerre(double *x,
              double *w,
              int N,
+             int include_zero,
              ErrorMsg errmsg);
       int get_qsampling(double *x,
 			double *w,

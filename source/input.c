@@ -838,10 +838,15 @@ int input_read_parameters(
      * */
     class_read_double_or_default("deg_dncdm",pba->deg_dncdm,pba->deg_dncdm_default);
 
+    class_read_int_or_default("q_size_dncdm_bg",pba->q_size_dncdm_bg,pba->q_size_dncdm_bg);
+    class_read_int_or_default("q_size_dncdm",pba->q_size_dncdm,pba->q_size_dncdm);
     if (input_verbose > 0)
     {
       printf(" -> Read in Decaying NCDM parameters: Omega_ini_dncdm, m_dncdm, dofs, Gamma_dncdm = %e, %e, %e, %e\n", 
           pba->Omega_ini_dncdm, pba->m_dncdm_in_eV, 2.*pba->deg_dncdm, pba->Gamma_dncdm);
+      printf(" -> Read in Decaying NCDM parameters: q_size_dncdm_bg, q_size_dncdm = %d, %d\n", 
+          pba->q_size_dncdm_bg, pba->q_size_dncdm);
+
     }
 
     /* Given the degeneracy parameter and initial energy density we can solve for the temperature, 
@@ -3063,6 +3068,8 @@ int input_default_params(
   pba->Gamma_dncdm = 0.0;
   pba->deg_dncdm_default = 0.5;
   pba->deg_dncdm = 0;
+  pba->q_size_dncdm_bg = 11;
+  pba->q_size_dncdm = 5;
   pba->dncdm_psd_parameters = NULL;
 
   pba->T_dncdm = 0;

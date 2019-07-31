@@ -514,6 +514,12 @@ extern "C" {
 				  double * f0
 				  );
 
+  int background_dncdm_distribution_original(
+				  void *pba,
+				  double q,
+				  double * f0
+				  );
+
   int background_ncdm_test_function(
 				     void *pba,
 				     double q,
