@@ -8442,19 +8442,21 @@ int perturb_derivs(double tau,
 
         // At late times, the densities are exponentially small, so division of small numbers
         // can lead to numerical instabilities
-        if (rho_dncdm_bg > 1e-40)
+        if (rho_dncdm_bg > 1e-40 && p_dncdm_bg > 0. && p_dncdm_bg/rho_dncdm_bg < 1.)
           w_dncdm = p_dncdm_bg/rho_dncdm_bg; /* equation of state parameter */
         else
           w_dncdm = 0.; // What is the actual asymptote?
 
-        if (p_dncdm_bg > 1e-40){
+        if (p_dncdm_bg > 1e-40 && pseudo_p_dncdm > 0. && pseudo_p_dncdm/p_dncdm_bg <= 1.){
           p_ratio_dncdm = pseudo_p_dncdm/p_dncdm_bg;
           ca2_dncdm = w_dncdm/3.0/(1.0+w_dncdm)*(5.0-p_ratio_dncdm); /* adiabatic sound speed */
+          //printf("ca2_dncdm, ratio = %e %e\n",ca2_dncdm,p_ratio_dncdm);
         }
         else
         {
           ca2_dncdm = w_dncdm/3.0/(1.0+w_dncdm)*(5.0-0.); // What is the actual asymptote? 
           p_ratio_dncdm  = 0.;
+          //printf("ca2, w/(1+w)= %e %e\n",ca2_dncdm,w_dncdm/3.0/(1.0+w_dncdm));
         }
 
 
