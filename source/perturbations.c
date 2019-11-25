@@ -2585,6 +2585,14 @@ int perturb_prepare_output(struct background * pba,
       class_store_columntitle(ppt->scalar_titles,"theta_dncdm",pba->has_dncdm == _TRUE_);
       class_store_columntitle(ppt->scalar_titles,"shear_dncdm",pba->has_dncdm == _TRUE_);
       class_store_columntitle(ppt->scalar_titles,"delta_n_over_n_dncdm",pba->has_dncdm == _TRUE_);
+      if(pba->has_dncdm == _TRUE_)
+      {
+        for (int l = 0; l < 10; l++)
+        {
+            sprintf(tmp,"CI_dr[%d]",l);
+            class_store_columntitle(ppt->scalar_titles,tmp,_TRUE_);
+        }
+      }
       /* Decay radiation */
       class_store_columntitle(ppt->scalar_titles, "delta_dr", ((pba->has_dr == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)) );
       class_store_columntitle(ppt->scalar_titles, "theta_dr", ((pba->has_dr == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)) );
@@ -4082,6 +4090,9 @@ int perturb_vector_init(
             }
           }
 
+          // Skipping the excplicit integration, b/c ppw already has the required values!
+          // Compute density, velocity and shear perturbations by integrating the perturbed phase space
+          /*
           a = ppw->pvecback[pba->index_bg_a];
           index_pt = ppw->pv->index_pt_psi0_dncdm;
           // We are in the fluid approximation, so dncdm_l_size is always 3.
@@ -4092,28 +4103,32 @@ int perturb_vector_init(
             ppv->y[ppv->index_pt_psi0_dncdm+l] = 0.0;
           }
           factor = pba->factor_dncdm*pow(pba->a_today/a,4);
-           
-          // We normalize the integrals to include the decay
-          // which is currently NOT computed self-consistently during the evolution
-          // (the integrated b/g quantities include the decay, while the b/g f_0 is just Bose-Einstein)
+         
+          double f0, lnf0; 
+
           f0_norm = 0.;
           for(index_q=0; index_q < ppw->pv->q_size_dncdm; index_q++){
+            lnf0 = ppw->pvecback[pba->index_bg_lnf_pt_dncdm + index_q];
+            if (lnf0 > -100.)
+              f0 = exp(lnf0);
+            else
+              f0 = 0.;
             // Integrate over distributions:
             q = pba->q_dncdm[index_q];
             q2 = q*q;
             epsilon = sqrt(q2+a*a*pba->M_dncdm*pba->M_dncdm);
-            f0_norm += pba->w_dncdm[index_q]*q2*epsilon;
+            f0_norm += pba->w_dncdm[index_q]*q2*epsilon*f0;
             ppv->y[ppv->index_pt_psi0_dncdm] +=
               pba->w_dncdm[index_q]*q2*epsilon*
-              ppw->pv->y[index_pt];
+              ppw->pv->y[index_pt]*f0;
 
             ppv->y[ppv->index_pt_psi0_dncdm+1] +=
               pba->w_dncdm[index_q]*q2*q*
-              ppw->pv->y[index_pt+1];
+              ppw->pv->y[index_pt+1]*f0;
 
             ppv->y[ppv->index_pt_psi0_dncdm+2] +=
               pba->w_dncdm[index_q]*q2*q2/epsilon*
-              ppw->pv->y[index_pt+2];
+              ppw->pv->y[index_pt+2]*f0;
 
             //Jump to next momentum bin in ppw->pv->y:
             index_pt += (ppw->pv->l_max_dncdm+1);
@@ -4121,9 +4136,12 @@ int perturb_vector_init(
 
           f0_norm *= factor;
 
-          //ppv->y[ppv->index_pt_psi0_dncdm] *=factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm)/ppw->pvecback[pba->index_bg_rho_dncdm];
-          //ppv->y[ppv->index_pt_psi0_dncdm+1] *=k*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm)/ppw->pvecback[pba->index_bg_rho_dncdm];
-          //ppv->y[ppv->index_pt_psi0_dncdm+2] *=2.0/3.0*factor*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm)/ppw->pvecback[pba->index_bg_rho_dncdm];
+          ppv->y[ppv->index_pt_psi0_dncdm] *=factor;
+          ppv->y[ppv->index_pt_psi0_dncdm+1] *=k*factor;
+          ppv->y[ppv->index_pt_psi0_dncdm+2] *=2.0/3.0*factor;
+          */
+
+          // ppw is filled with these already
           ppv->y[ppv->index_pt_psi0_dncdm] = ppw->delta_dncdm; 
           ppv->y[ppv->index_pt_psi0_dncdm+1] = ppw->theta_dncdm;
           ppv->y[ppv->index_pt_psi0_dncdm+2] = ppw->shear_dncdm;
@@ -5184,13 +5202,13 @@ int perturb_approximations(
         ppw->approx[ppw->index_ap_ncdmfa] = (int)ncdmfa_off;
       }
     }
+
     if (pba->has_dncdm == _TRUE_) {
       //ppw->approx[ppw->index_ap_dncdmfa] = (int)dncdmfa_off;
-      /*
-      // UNCOMMENT THIS
-      */
-      if ((tau/tau_k > ppr->dncdm_fluid_trigger_tau_over_tau_k) &&
-          (ppr->dncdm_fluid_approximation != dncdmfa_none)) {
+      if (((tau/tau_k > ppr->dncdm_fluid_trigger_tau_over_tau_k) &&
+          (ppr->dncdm_fluid_approximation != dncdmfa_none)) || 
+          (ppw->pvecback[pba->index_bg_rho_dncdm]/ppw->pvecback[pba->index_bg_rho_dr] < 1e-10)
+          ) {
 
         ppw->approx[ppw->index_ap_dncdmfa] = (int)dncdmfa_on;
       }
@@ -5922,7 +5940,7 @@ int perturb_total_stress_energy(
         pseudo_p_dncdm = ppw->pvecback[pba->index_bg_pseudo_p_dncdm];
 
         rho_plus_p_dncdm = rho_dncdm_bg + p_dncdm_bg;
-        if (rho_dncdm_bg > 0.) 
+        if (rho_dncdm_bg > 1e-40) 
           w_dncdm = p_dncdm_bg/rho_dncdm_bg;
         else
           w_dncdm = 0.;
@@ -5937,7 +5955,9 @@ int perturb_total_stress_energy(
           ppw->theta_dncdm = y[idx+1];
           ppw->shear_dncdm = y[idx+2];
 
-          ppw->delta_n_over_n_dncdm = ppw->delta_dncdm;
+          // the factor 1/(1+w) is adhoc and interpolates between the relativistic regime where 
+          // dn/n = 4/3 drho/rho and the non-relativistic regime when dn/n = drho/rho
+          ppw->delta_n_over_n_dncdm = ppw->delta_dncdm/(1. + w_dncdm);
         }
 
         ppw->delta_rho += rho_dncdm_bg*y[idx];
@@ -5986,23 +6006,22 @@ int perturb_total_stress_energy(
 
         f0_norm *= factor;
 
-        // Manual normalization of the perturbations!
         n_delta_dncdm *= factor/(pba->a_today/a);
-        rho_delta_dncdm *= factor;//*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
-        rho_plus_p_theta_dncdm *= k*factor;//*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
-        rho_plus_p_shear_dncdm *= 2.0/3.0*factor;//*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
-        delta_p_dncdm *= factor/3.;//*(ppw->pvecback[pba->index_bg_rho_dncdm]/f0_norm);
+        rho_delta_dncdm *= factor;
+        rho_plus_p_theta_dncdm *= k*factor;
+        rho_plus_p_shear_dncdm *= 2.0/3.0*factor;
+        delta_p_dncdm *= factor/3.;
 
         // Store the integrated quantities so they can be used in DR collision terms in perturb_derivs
         // If the b/g density is small then we don't care what the perturbations are doing;
         // avoids division by 0 and the resulting shitstorm
-        if (ppw->pvecback[pba->index_bg_rho_dncdm] > 0.){
-          ppw->delta_n_over_n_dncdm = n_delta_dncdm/ppw->pvecback[pba->index_bg_n_dncdm];
+        if (ppw->pvecback[pba->index_bg_rho_dncdm] > 1e-40){
           ppw->delta_dncdm = rho_delta_dncdm/ppw->pvecback[pba->index_bg_rho_dncdm];
           ppw->theta_dncdm = rho_plus_p_theta_dncdm/
             (ppw->pvecback[pba->index_bg_rho_dncdm]+ppw->pvecback[pba->index_bg_p_dncdm]);
           ppw->shear_dncdm = rho_plus_p_shear_dncdm/
             (ppw->pvecback[pba->index_bg_rho_dncdm]+ppw->pvecback[pba->index_bg_p_dncdm]);
+          ppw->delta_n_over_n_dncdm = n_delta_dncdm/ppw->pvecback[pba->index_bg_n_dncdm];
         }
         else {
           ppw->delta_n_over_n_dncdm = 0.;
@@ -7109,7 +7128,7 @@ int perturb_print_variables(double tau,
         shear_dncdm = y[idx+2];
         //This is the adiabatic sound speed:
         delta_p_over_delta_rho_dncdm = w_dncdm*(1.0-1.0/(3.0+3.0*w_dncdm)*(3.0*w_dncdm-2.0+pseudo_p_dncdm/p_dncdm_bg));
-        delta_n_over_n_dncdm = delta_dncdm;
+        delta_n_over_n_dncdm = delta_dncdm/(1.+w_dncdm);
         idx += ppw->pv->l_max_dncdm+1;
       }
       else{
@@ -7205,8 +7224,8 @@ int perturb_print_variables(double tau,
 
       /* density and velocity perturbations (comment out if you wish to keep synchronous variables) */
 
-      delta_g -= 4. * pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]*alpha;
-      theta_g += k*k*alpha;
+      //delta_g -= 4. * pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]*alpha;
+      //theta_g += k*k*alpha;
 
       delta_b -= 3. * pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]*alpha;
       theta_b += k*k*alpha;
@@ -7217,9 +7236,9 @@ int perturb_print_variables(double tau,
       }
 
       if ((pba->has_dr == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)) {
-        delta_dr += (-4.*a*H+a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]/pvecback[pba->index_bg_rho_dr])*alpha;
+        //delta_dr += (-4.*a*H+a*pba->Gamma_dcdm*pvecback[pba->index_bg_rho_dcdm]/pvecback[pba->index_bg_rho_dr])*alpha;
 
-        theta_dr += k*k*alpha;
+        //theta_dr += k*k*alpha;
       }
 
       if (pba->has_cdm == _TRUE_) {
@@ -7237,8 +7256,9 @@ int perturb_print_variables(double tau,
       }
 
       if ((pba->has_dcdm == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)) {
-        delta_dcdm += alpha*(-a*pba->Gamma_dcdm-3.*a*H);
-        theta_dcdm += k*k*alpha;
+        // These lines convert the output to newtonian gauge: boo!
+        //delta_dcdm += alpha*(-a*pba->Gamma_dcdm-3.*a*H);
+        //theta_dcdm += k*k*alpha;
       }
 
       if (pba->has_scf == _TRUE_) {
@@ -7307,7 +7327,12 @@ int perturb_print_variables(double tau,
       class_store_double(dataptr, theta_dncdm, pba->has_dncdm, storeidx);
       class_store_double(dataptr, shear_dncdm, pba->has_dncdm, storeidx);
       class_store_double(dataptr, delta_n_over_n_dncdm,  pba->has_dncdm, storeidx);
-      //class_store_double(dataptr, delta_p_over_delta_rho_dncdm,  pba->has_dncdm, storeidx);
+      
+      double fprime_dr;
+      fprime_dr = pba->Gamma_dncdm*pba->M_dncdm*pvecback[pba->index_bg_n_dncdm]*pow(a,5)/pow(pba->H0,2);
+      for (int l = 0; l < 10; l++)
+        class_store_double(dataptr, fprime_dr*ppw->dr_collision_integral_dncdm[l]/(y[ppw->pv->index_pt_F0_dr+l]+1e-30), _TRUE_, storeidx);
+        //class_store_double(dataptr, ppw->dr_collision_integral_dncdm[l], _TRUE_, storeidx);
     }
     /* Decay radiation */
     if ((pba->has_dr == _TRUE_) && (pba->has_dcdm_bg_only == _FALSE_)){
@@ -7465,7 +7490,7 @@ int perturb_dncdm_dr_collision_integral(double * y,
                                         void * parameters_and_workspace
                                        ){
   int idx, l, index_q;
-  double lnf0, f0, f0_norm, a, q, q2, epsilon;
+  double k, lnf0, f0, dlnf0_dlnq, f0_norm, a, q, q2, epsilon;
 
   /* short-cut names for the fields of the input structure */
   struct perturb_parameters_and_workspace * pppaw;
@@ -7473,6 +7498,8 @@ int perturb_dncdm_dr_collision_integral(double * y,
   struct perturb_workspace * ppw;
   
   pppaw = parameters_and_workspace;
+
+  k = pppaw->k;
 
   pba = pppaw->pba;
   ppw = pppaw->ppw;
@@ -7483,19 +7510,41 @@ int perturb_dncdm_dr_collision_integral(double * y,
   // Initialize the array
   for (l = 0; l < ppw->pv->l_max_dr; l++){
       ppw->dr_collision_integral_dncdm[l] = 0.; 
-    }
+  }
   // Approximate DNCDM boltzmann equations being calculated
   if(ppw->approx[ppw->index_ap_dncdmfa] == (int)dncdmfa_on){
     ppw->dr_collision_integral_dncdm[0] = y[idx];
-    ppw->dr_collision_integral_dncdm[1] = y[idx+1];
+    ppw->dr_collision_integral_dncdm[1] = y[idx+1]/k;
     // This collision term isnt quite right, since the actual kernel is a complicated function.
-    ppw->dr_collision_integral_dncdm[2] = y[idx+2];
+    //ppw->dr_collision_integral_dncdm[2] = y[idx+2];
+    // Assume that the q dependence of Psi_2 is only via dlnf/dlnq
+    for (index_q=0; index_q < ppw->pv->q_size_dncdm; index_q++) {
+          lnf0 = ppw->pvecback[pba->index_bg_lnf_pt_dncdm + index_q];
+          dlnf0_dlnq = ppw->pvecback[pba->index_bg_dlnf_dlnq_pt_dncdm + index_q];
+          if (lnf0 > -100.)
+            f0 = exp(lnf0);
+          else
+          {
+            f0 = 0.;
+            continue;
+          }
+
+          q = pba->q_dncdm[index_q];
+          q2 = q*q;
+          epsilon = sqrt(q2+pba->M_dncdm*pba->M_dncdm*a*a);
+          f0_norm += pba->w_dncdm[index_q]*q2*f0;
+
+          ppw->dr_collision_integral_dncdm[2] += (-y[idx+2]/2.)*q2*pba->w_dncdm[index_q]*f0*dlnf0_dlnq*dncdm_decay_kernel(q/epsilon, 2);
+        }
+        if (f0_norm > 0.)
+          ppw->dr_collision_integral_dncdm[2] *= 1./f0_norm;
   }
   // Full DNCDM Hierarchy being evaluated
   else
   {
     // This traverses the arrays in sub-optimal way (q's first, then l's)
-    for (l = 0; l < ppw->pv->l_max_dr; l++){
+    //for (l = 0; l < ppw->pv->l_max_dr; l++){
+    for (l = 0; l < pba->num_dr_collision_integrals; l++){
       idx = ppw->pv->index_pt_psi0_dncdm;
       ppw->dr_collision_integral_dncdm[l] = 0.;
       f0_norm = 0.;
@@ -7523,15 +7572,19 @@ int perturb_dncdm_dr_collision_integral(double * y,
           idx += ppw->pv->l_max_dncdm+1;
         }
 
-        //if (l == 1 && fabs(ppw->dr_collision_integral_dncdm[l]/f0_norm) > 1.)
-        //  printf("-> dr_ci[1], f0_norm = %e %e \n",ppw->dr_collision_integral_dncdm[l],f0_norm);
 
         if (f0_norm > 0.)
           ppw->dr_collision_integral_dncdm[l] *= 1./f0_norm;
+
+        //if (l == 1 && fabs(ppw->dr_collision_integral_dncdm[l]/f0_norm) > 1.)
+        //  printf("-> dr_ci[1], f0_norm = %e %e \n",ppw->dr_collision_integral_dncdm[l],f0_norm);
       }
       else
         ppw->dr_collision_integral_dncdm[l] = 0.;
+
+      //printf("%e\t",ppw->dr_collision_integral_dncdm[l]);
     }
+    //printf("\n");
     /*
     f0_norm = 0.;
     for (l = 0; l < ppw->pv->l_max_dr; l++){
@@ -8048,7 +8101,7 @@ int perturb_derivs(double tau,
 
     }
 
-    /** - ---> dr from DNCDM: THIS NEEDS TO BE FIXED */
+    /** - ---> dr from DNCDM */
 
     if ((pba->has_dncdm == _TRUE_) && (pba->has_dr == _TRUE_)) {
 
@@ -8061,6 +8114,7 @@ int perturb_derivs(double tau,
 
       f_dr = pow(pow(a/pba->a_today,2)/pba->H0,2)*pvecback[pba->index_bg_rho_dr];
       fprime_dr = pba->Gamma_dncdm*pba->M_dncdm*pvecback[pba->index_bg_n_dncdm]*pow(a,5)/pow(pba->H0,2);
+      //printf("-> a Gamma/H = %e\n",pvecback[pba->index_bg_a]*pba->Gamma_dncdm/a_prime_over_a);
 
       //delta_dncdm and theta_dncdm should have been computed when calling perturb_einstein at the beginning of this function 
       /** - ----> dr F0 */
@@ -8087,7 +8141,7 @@ int perturb_derivs(double tau,
       for (l = 4; l < pv->l_max_dr; l++) {
         dy[pv->index_pt_F0_dr+l] = k/(2.*l+1)*
           (l*s_l[l]*y[pv->index_pt_F0_dr+l-1]-(l+1.)*s_l[l+1]*y[pv->index_pt_F0_dr+l+1])
-          + 0*fprime_dr*ppw->dr_collision_integral_dncdm[l];
+          + fprime_dr*ppw->dr_collision_integral_dncdm[l];
         //if (ppw->dr_collision_integral_dncdm[l] > 0.) 
         //  printf(" l=%d : %e \t", l, ppw->dr_collision_integral_dncdm[l]);
       }
@@ -8388,14 +8442,14 @@ int perturb_derivs(double tau,
 
         // At late times, the densities are exponentially small, so division of small numbers
         // can lead to numerical instabilities
-        if (rho_dncdm_bg > 1e-16)
+        if (rho_dncdm_bg > 1e-40)
           w_dncdm = p_dncdm_bg/rho_dncdm_bg; /* equation of state parameter */
         else
           w_dncdm = 0.; // What is the actual asymptote?
 
-        if (p_dncdm_bg > 0.){
-          ca2_dncdm = w_dncdm/3.0/(1.0+w_dncdm)*(5.0-pseudo_p_dncdm/p_dncdm_bg); /* adiabatic sound speed */
+        if (p_dncdm_bg > 1e-40){
           p_ratio_dncdm = pseudo_p_dncdm/p_dncdm_bg;
+          ca2_dncdm = w_dncdm/3.0/(1.0+w_dncdm)*(5.0-p_ratio_dncdm); /* adiabatic sound speed */
         }
         else
         {
@@ -8456,6 +8510,7 @@ int perturb_derivs(double tau,
           +8.0/3.0*cvis2_dncdm/(1.0+w_dncdm)*s_l[2]*(y[idx+1]+metric_ufa_class);
         }
         //printf("-> 1, 2, 3: %e %e %e\n",y[idx], y[idx+1], y[idx+2]);
+        //printf("-> 1+w, ca2, cvis2, p_ratio: %e %e %e %e\n",1.0+w_dncdm, ca2_dncdm, cvis2_dncdm,p_ratio_dncdm);
 
       }
 
@@ -8475,6 +8530,7 @@ int perturb_derivs(double tau,
           qk_div_epsilon = k*q/epsilon;
           
           // the coefficient in front of the DNCDM collision terms
+          // This should vanish in the synchronous gauge, but not in Newtonian gauge
           f_dncdm = 0.*pba->M_dncdm*pba->Gamma_dncdm*a2/epsilon;
 
           /** - -----> dncdm density for given momentum bin */

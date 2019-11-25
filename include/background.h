@@ -371,6 +371,7 @@ struct background
   double * dlnf0_dlnq_dncdm; /**< Pointers to vectors of logarithmic derivatives of p-s-d */
   int q_size_dncdm_bg; /**< Size of the q_ncdm_bg array */
   int q_size_dncdm;    /**< Size of the q_ncdm array */
+  int num_dr_collision_integrals; /**< Number of source terms for the DR Boltzmann hierarchy to compute */
   double factor_dncdm; /**< Normalization factor for calculating energy density etc.*/
 
   //@}

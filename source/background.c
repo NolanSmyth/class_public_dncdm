@@ -1733,6 +1733,7 @@ int background_dncdm_init(
   
   printf("After automatic sampling: ");
   */
+  /*
   printf("q_size_dncdm_bg = %d\n",pba->q_size_dncdm_bg);
   printf("q_size_dncdm = %d\n",pba->q_size_dncdm);
 
@@ -1741,7 +1742,7 @@ int background_dncdm_init(
 
   for (int i = 0; i < pba->q_size_dncdm; i++)
     printf("-> pt sampling: q, w = %e %e\n", pba->q_dncdm[i],pba->w_dncdm[i]);
-
+  */
   //printf("-> dncdm_init: first derivative matrix: \n");
   //for (int i = 0; i < pba->q_size_dncdm_bg; i++){
   //  for (int j = 0; j < pba->q_size_dncdm_bg; j++){
@@ -1960,6 +1961,9 @@ int background_dncdm_momenta(
   }
 
   /** - adjust normalization */
+  // Note that n is really T_0 * n, so it has the same dimensions as rho.
+  // Since M_dncdm is really m/T_0, M_dncdm *n has the correct dimensions and matches onto
+  // the energy density in the non-relativistic limit
   if (n!=NULL) *n *= factor2/(1.+z);
   if (rho!=NULL) *rho *= factor2;
   if (p!=NULL) *p *= factor2;

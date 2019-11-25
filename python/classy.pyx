@@ -1189,7 +1189,7 @@ cdef class Class:
 
     def w_dncdm(self, z):
         """
-        w_dncdm
+        Output w_dncdm = p/rho, the equation of state of DNCDM
 
         Parameters
         ----------
@@ -1219,6 +1219,40 @@ cdef class Class:
             w_dncdm = 0.
 
         return w_dncdm
+
+    def p_ratio_dncdm(self, z):
+        """
+        output pseudo_p_dncdm/p_dncdm_bg, a quantity 
+        needed for the fluid approximation of the DNCDM Boltzmann hierarchy
+
+        Parameters
+        ----------
+        z : float
+                Desired redshift
+        """
+        cdef double tau
+        cdef int last_index #junk
+        cdef double * pvecback
+
+        pvecback = <double*> calloc(self.ba.bg_size,sizeof(double))
+
+        if background_tau_of_z(&self.ba,z,&tau)==_FAILURE_:
+            raise CosmoSevereError(self.ba.error_message)
+
+        if background_at_tau(&self.ba,tau,self.ba.long_info,self.ba.inter_normal,&last_index,pvecback)==_FAILURE_:
+            raise CosmoSevereError(self.ba.error_message)
+
+        p_dncdm = pvecback[self.ba.index_bg_p_dncdm]
+        pseudo_p_dncdm = pvecback[self.ba.index_bg_pseudo_p_dncdm]
+
+        free(pvecback)
+
+        if p_dncdm > 0.:
+            p_ratio = pseudo_p_dncdm/p_dncdm
+        else:
+            p_ratio = 0.
+
+        return p_ratio
 
     def z_of_tau(self, tau):
         """

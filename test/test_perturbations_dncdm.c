@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     printf("\n\nError in perturb_init \n=>%s\n",pt.error_message);
     return _FAILURE_;
   }
-  exit(0);
+  //exit(0);
 
   if (pt.has_perturbations == _TRUE_) {
 
@@ -62,9 +62,10 @@ int main(int argc, char **argv) {
     output=fopen("output/source.dat","w");
     fprintf(output,"#   k       tau       S\n");
 
-    index_k = 300;
+    //index_k = 300;
     index_k = 10;
-    index_k = 400;
+    //index_k = 400;
+    index_k = 602;
     fprintf(output, "# k = %e\n",pt.k[index_md][index_k]);
 
       for (index_tau=0; index_tau < pt.tau_size; index_tau++) {

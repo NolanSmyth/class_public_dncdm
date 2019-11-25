@@ -75,6 +75,7 @@ cdef extern from "class.h":
         int q_size_dncdm_bg
         int index_bg_rho_dncdm
         int index_bg_p_dncdm
+        int index_bg_pseudo_p_dncdm
 
     cdef struct thermo:
         ErrorMsg error_message

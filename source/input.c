@@ -840,6 +840,8 @@ int input_read_parameters(
 
     class_read_int_or_default("q_size_dncdm_bg",pba->q_size_dncdm_bg,pba->q_size_dncdm_bg);
     class_read_int_or_default("q_size_dncdm",pba->q_size_dncdm,pba->q_size_dncdm);
+
+    class_read_int_or_default("num_dr_collision_integrals",pba->num_dr_collision_integrals,pba->num_dr_collision_integrals);
     if (input_verbose > 0)
     {
       printf(" -> Read in Decaying NCDM parameters: Omega_ini_dncdm, m_dncdm, dofs, Gamma_dncdm = %e, %e, %e, %e\n", 
@@ -2776,8 +2778,10 @@ int input_read_parameters(
 
   class_read_int("ur_fluid_approximation",ppr->ur_fluid_approximation);
   class_read_int("ncdm_fluid_approximation",ppr->ncdm_fluid_approximation);
+  class_read_int("dncdm_fluid_approximation",ppr->dncdm_fluid_approximation);
   class_read_double("ur_fluid_trigger_tau_over_tau_k",ppr->ur_fluid_trigger_tau_over_tau_k);
   class_read_double("ncdm_fluid_trigger_tau_over_tau_k",ppr->ncdm_fluid_trigger_tau_over_tau_k);
+  class_read_double("dncdm_fluid_trigger_tau_over_tau_k",ppr->dncdm_fluid_trigger_tau_over_tau_k);
 
   class_test(ppr->ur_fluid_trigger_tau_over_tau_k==ppr->radiation_streaming_trigger_tau_over_tau_k,
              errmsg,
@@ -3066,10 +3070,11 @@ int input_default_params(
   pba->Omega_ini_dncdm = 0.0;
   pba->m_dncdm_in_eV = 0.0;
   pba->Gamma_dncdm = 0.0;
-  pba->deg_dncdm_default = 0.5;
+  pba->deg_dncdm_default = 1.0;
   pba->deg_dncdm = 0;
   pba->q_size_dncdm_bg = 11;
   pba->q_size_dncdm = 5;
+  pba->num_dr_collision_integrals = 3;
   pba->dncdm_psd_parameters = NULL;
 
   pba->T_dncdm = 0;
@@ -3491,7 +3496,7 @@ int input_default_precision ( struct precision * ppr ) {
   ppr->ncdm_fluid_approximation = ncdmfa_CLASS;
   ppr->ncdm_fluid_trigger_tau_over_tau_k = 31.;
 
-  ppr->dncdm_fluid_approximation = ncdmfa_CLASS;
+  ppr->dncdm_fluid_approximation = dncdmfa_CLASS;
   // We make the default approx switching threshold different from the above, b/c CLASS cannot switch two approximations at once;
   // This is handy if the model includes both DNCDM and NCDM (i.e. massive neutrinos).
   ppr->dncdm_fluid_trigger_tau_over_tau_k = 32.;
