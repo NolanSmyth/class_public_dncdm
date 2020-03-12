@@ -7517,27 +7517,32 @@ int perturb_dncdm_dr_collision_integral(double * y,
     ppw->dr_collision_integral_dncdm[1] = y[idx+1]/k;
     // This collision term isnt quite right, since the actual kernel is a complicated function.
     //ppw->dr_collision_integral_dncdm[2] = y[idx+2];
-    // Assume that the q dependence of Psi_2 is only via dlnf/dlnq
-    for (index_q=0; index_q < ppw->pv->q_size_dncdm; index_q++) {
-          lnf0 = ppw->pvecback[pba->index_bg_lnf_pt_dncdm + index_q];
-          dlnf0_dlnq = ppw->pvecback[pba->index_bg_dlnf_dlnq_pt_dncdm + index_q];
-          if (lnf0 > -100.)
-            f0 = exp(lnf0);
-          else
-          {
-            f0 = 0.;
-            continue;
-          }
-
-          q = pba->q_dncdm[index_q];
-          q2 = q*q;
-          epsilon = sqrt(q2+pba->M_dncdm*pba->M_dncdm*a*a);
-          f0_norm += pba->w_dncdm[index_q]*q2*f0;
-
-          ppw->dr_collision_integral_dncdm[2] += (-y[idx+2]/2.)*q2*pba->w_dncdm[index_q]*f0*dlnf0_dlnq*dncdm_decay_kernel(q/epsilon, 2);
+    if (pba->num_dr_collision_integrals > 2) 
+    {
+      // Assume that the q dependence of Psi_2 is only via dlnf/dlnq
+      for (index_q=0; index_q < ppw->pv->q_size_dncdm; index_q++) {
+        lnf0 = ppw->pvecback[pba->index_bg_lnf_pt_dncdm + index_q];
+        dlnf0_dlnq = ppw->pvecback[pba->index_bg_dlnf_dlnq_pt_dncdm + index_q];
+        if (lnf0 > -100.)
+          f0 = exp(lnf0);
+        else
+        {
+          f0 = 0.;
+          continue;
         }
-        if (f0_norm > 0.)
-          ppw->dr_collision_integral_dncdm[2] *= 1./f0_norm;
+
+        q = pba->q_dncdm[index_q];
+        q2 = q*q;
+        epsilon = sqrt(q2+pba->M_dncdm*pba->M_dncdm*a*a);
+        f0_norm += pba->w_dncdm[index_q]*q2*f0;
+
+        ppw->dr_collision_integral_dncdm[2] += (-y[idx+2]/2.)*q2*pba->w_dncdm[index_q]*f0*dlnf0_dlnq*dncdm_decay_kernel(q/epsilon, 2);
+      }
+      if (f0_norm > 0.)
+        ppw->dr_collision_integral_dncdm[2] *= 1./f0_norm;
+    }
+    else
+      ppw->dr_collision_integral_dncdm[2] = 0.;
   }
   // Full DNCDM Hierarchy being evaluated
   else
@@ -7571,7 +7576,6 @@ int perturb_dncdm_dr_collision_integral(double * y,
           // there are lmax+1 multipoles in the hierarchy
           idx += ppw->pv->l_max_dncdm+1;
         }
-
 
         if (f0_norm > 0.)
           ppw->dr_collision_integral_dncdm[l] *= 1./f0_norm;
