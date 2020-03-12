@@ -3072,7 +3072,7 @@ int input_default_params(
   pba->Gamma_dncdm = 0.0;
   pba->deg_dncdm_default = 1.0;
   pba->deg_dncdm = 0;
-  pba->q_size_dncdm_bg = 11;
+  pba->q_size_dncdm_bg = 20;
   pba->q_size_dncdm = 5;
   pba->num_dr_collision_integrals = 3;
   pba->dncdm_psd_parameters = NULL;
