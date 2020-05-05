@@ -1,3 +1,6 @@
+This version of CLASS implements a warm decaying 
+dark matter component as described in https://arxiv.org/abs/2004.06114
+
 CLASS: Cosmic Linear Anisotropy Solving System  {#mainpage}
 ==============================================
 
