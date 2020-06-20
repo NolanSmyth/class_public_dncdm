@@ -119,3 +119,85 @@ To get support, please open a new issue on the
 https://github.com/lesgourg/class_public
 
 webpage!
+
+
+New Additions (from L. Morrison and N. Smyth)
+=============================================
+
+Implementing and using custom PS distribution
+---------------------------------------------
+
+We have added a custom NCDM PS. In order to use the custom distribution one
+needs to define:
+```c
+#define CUSTOM_PSD
+```
+Currently, the PS distribution is given by:
+```c
+double ncdm_ps_dist(double q, void *params) {
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+  double cp = fp->chemical_potential;
+  double m = fp->mass;
+  double rescale = fp->rescale;
+  double eng = sqrt(q * q + m * m / rescale / rescale);
+  return 1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0);
+}
+```
+where the parameters are:
+```c
+struct NcdmPsDistParams {
+  // Mass of the NCDM scaled by the temperature.
+  double mass;
+  // Factor to rescale temperature based on redshift
+  double rescale;
+  // Chemical potential of the NCDM scaled by the temperature (default is 0.0)
+  double chemical_potential;
+};
+```
+We then use this distrubition as well as GSL to compute number, energy and
+pressure densities (and other quantities.) For example, we compute the number
+density using:
+```c
+double rescale = 1.0 + z;
+double factor2 = factor * pow(rescale, 4);
+
+// Set the parameters
+struct NcdmPsDistParams params = {rescale, M, 0.0};
+
+// Parameters for integration:
+double epsabs = 0.0;  // Absolute tolerance
+double epsrel = 1e-5; // Relative tolerance
+size_t limit = 1000;  // Number of refinements allowed by routine.
+
+// Alloc memory for GSL's integration routine. We may want to allocate
+// this elsewhere if it becomes too costly.
+gsl_integration_workspace *w = gsl_integration_workspace_alloc(limit);
+
+double result; // We will store integration results here
+double error;  // We will store the estimate integration errors here
+// Function struct needed by GSL to integrate a function. We will use
+// this for all functions and just set the `function` parameter
+// appropriately (see below)
+gsl_function F;
+// Parameters of the PS distribution needed to evaluate integrands.
+F.params = &params;
+// Set function to integrate:
+F.function = &ncdm_number_density_integrand;
+double lb = 0.0; // Lower bound of integration.
+// Perform integration (qagiu is for integration over (0, +inf)):
+gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+// Set the result and rescale. Need extra factor of 1/rescale since
+// n ~ T^3 and factor2 is for something that goes like T^4
+result * factor2 / rescale; // Compute number density
+```
+
+Computing the NCDM temperature
+------------------------------
+It appears to me that in the default implementation, the NCDM temperature is
+computed by a simple redshift:
+```c
+Tncdm_then = Tncdm_now * (1 + z)
+```
+The factor of `1 + z` is what we call above `rescale`. For a more general 
+temperature evolution, we should modify this `rescale` variable to be more
+complicated: `rescale = g(z)` where `g(z)` is some function of redshift.
