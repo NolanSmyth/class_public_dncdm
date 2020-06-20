@@ -935,6 +935,8 @@ int input_read_parameters(struct file_content *pfc, struct precision *ppr,
         /* Case of only mass or mass and Omega/omega: */
         pba->M_ncdm[n] =
             pba->m_ncdm_in_eV[n] / _k_B_ * _eV_ / pba->T_ncdm[n] / pba->T_cmb;
+
+        // printf("factor_ncdm = %e\n", pba->factor_ncdm[n]);
         class_call(background_ncdm_momenta(pba->q_ncdm_bg[n], pba->w_ncdm_bg[n],
                                            pba->q_size_ncdm_bg[n],
                                            pba->M_ncdm[n], pba->factor_ncdm[n],
@@ -945,6 +947,8 @@ int input_read_parameters(struct file_content *pfc, struct precision *ppr,
           pba->Omega0_ncdm[n] = rho_ncdm / pba->H0 / pba->H0;
         } else {
           fnu_factor = (pba->H0 * pba->H0 * pba->Omega0_ncdm[n] / rho_ncdm);
+          // printf("fnu_factor = %e\n", fnu_factor);
+          // printf("rho_ncdm = %e\n", rho_ncdm);
           pba->factor_ncdm[n] *= fnu_factor;
           /* dlnf0dlnq is already computed, but it is
              independent of any normalization of f0.

@@ -828,10 +828,11 @@ int background_init(struct precision *ppr, struct background *pba) {
   if ((pba->background_verbose > 0) && (pba->has_ncdm == _TRUE_)) {
     for (n_ncdm = 0; n_ncdm < pba->N_ncdm; n_ncdm++) {
       printf(" -> non-cold dark matter species with i=%d has m_i = %e eV (so "
-             "m_i / omega_i =%e eV)\n",
+             "m_i / omega_i =%e eV), omega_i = %e, h=%e, deg=%e\n",
              n_ncdm + 1, pba->m_ncdm_in_eV[n_ncdm],
              pba->m_ncdm_in_eV[n_ncdm] * pba->deg_ncdm[n_ncdm] /
-                 pba->Omega0_ncdm[n_ncdm] / pba->h / pba->h);
+                 pba->Omega0_ncdm[n_ncdm] / pba->h / pba->h,
+             pba->Omega0_ncdm[n_ncdm], pba->h, pba->deg_ncdm[n_ncdm]);
     }
   }
 
@@ -1853,22 +1854,29 @@ struct NcdmPsDistParams {
 
 /**
  * Compute the value of the non-cold-dark-matter phase space distribution
- * at a given momentum `q` given the distribution parameters `params`.
+ * at a given enegy.
  * Currently, this distribution is the Fermi-Dirac distribution. We will want
  * to modify this to our needs.
  *
- * @param q The magnitude of the three-momentum rescaled by temperature.
- * @param params Parameters of the phase space distribution.
- * @return Returns the value of f(q).
+ * @param eng Energy of the DM
+ * @param cp Chemical potential
+ * @return Returns the value of f(E).
  *
  */
-double ncdm_ps_dist(double q, void *params) {
-  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
-  double cp = fp->chemical_potential;
-  double m = fp->mass;
-  double rescale = fp->rescale;
-  double eng = sqrt(q * q + m * m / rescale / rescale);
-  return 1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0);
+inline double ncdm_ps_dist(double eng, double cp) {
+  return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
+         pow(2.0 * _PI_, 3.0);
+}
+
+/**
+ * Compute the scaled energy of the NCDM
+ *
+ * @param q Scaled NCDM momentum
+ * @param m Scaled NCDM mass
+ * @param rescale Scaling factor to get current temperature
+ */
+inline double ncdm_eng(double q, double m, double rescale) {
+  return sqrt(q * q + m * m / rescale / rescale);
 }
 
 /**
@@ -1881,7 +1889,11 @@ double ncdm_ps_dist(double q, void *params) {
  *
  */
 double ncdm_number_density_integrand(double q, void *params) {
-  double fq = ncdm_ps_dist(q, params);
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+
+  double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+
   return q * q * fq;
 }
 
@@ -1896,10 +1908,13 @@ double ncdm_number_density_integrand(double q, void *params) {
  */
 double ncdm_energy_density_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
-  double fq = ncdm_ps_dist(q, params);
-  double m = fp->mass;
-  double rescale = fp->rescale;
-  double eng = sqrt(q * q + m * m / rescale / rescale);
+
+  double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+  // printf("eng, fq, q, eng*q^2 *fq, m, rescale = %e, %e, %e, %e, %e,%e\n",
+  // eng,
+  //       fq, q, eng * q * q * fq, fp->mass, fp->rescale);
+
   return eng * q * q * fq;
 }
 
@@ -1914,12 +1929,11 @@ double ncdm_energy_density_integrand(double q, void *params) {
  */
 double ncdm_pressure_density_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
-  double fq = ncdm_ps_dist(q, params);
-  double m = fp->mass;
-  double rescale = fp->rescale;
-  double eng = sqrt(q * q + m * m / rescale / rescale);
-  double q4 = q * q * q * q;
-  return q4 / (3.0 * eng) * fq;
+
+  double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+
+  return q * q * q * q / (3.0 * eng) * fq;
 }
 
 /**
@@ -1934,11 +1948,11 @@ double ncdm_pressure_density_integrand(double q, void *params) {
  */
 double ncdm_energy_density_deriv_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
-  double fq = ncdm_ps_dist(q, params);
-  double m = fp->mass;
-  double rescale = fp->rescale;
-  double eng = sqrt(q * q + m * m / rescale / rescale);
-  return q * q * m / rescale / rescale * fq;
+
+  double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+
+  return q * q * fp->mass / fp->rescale / eng * fq;
 }
 
 /**
@@ -1952,10 +1966,10 @@ double ncdm_energy_density_deriv_integrand(double q, void *params) {
  */
 double ncdm_pseudo_pressure_density_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
-  double fq = ncdm_ps_dist(q, params);
-  double m = fp->mass;
-  double rescale = fp->rescale;
-  double eng = sqrt(q * q + m * m / rescale / rescale);
+
+  double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+
   return pow(q * q / eng, 3.0) / 3.0 * fq;
 }
 
@@ -1989,6 +2003,7 @@ int background_ncdm_momenta(
     double *drho_dM, // d rho / d M used in next function
     double *pseudo_p // pseudo-p used in ncdm fluid approx
 ) {
+  // printf("factor (passed to background_ncdm_momenta = %e\n", factor);
   // This is what we need to modify to modify the temperature dependence as
   // a function of redshift. I *think* that this factor is from the following
   // relationship: T^then = (1 + z) * T^now
@@ -1999,57 +2014,69 @@ int background_ncdm_momenta(
   struct NcdmPsDistParams params = {M, rescale, 0.0};
 
   // Parameters for integration:
-  double epsabs = 1e-8; // Absolute tolerance
+  double epsabs = 0.0;  // Absolute tolerance
   double epsrel = 1e-8; // Relative tolerance
   size_t limit = 1000;  // Number of refinements allowed by routine.
 
-  // Alloc memory for GSL's integration routine. We may want to allocate
-  // this elsewhere if it becomes too costly.
+  // Alloc memory for GSL's integration routine.
   gsl_integration_workspace *w = gsl_integration_workspace_alloc(limit);
 
-  double result; // We will store integration results here
-  double error;  // We will store the estimate integration errors here
-  // Function struct needed by GSL to integrate a function. We will use
-  // this for all functions and just set the `function` parameter
-  // appropriately (see below)
-  gsl_function F;
-  // Parameters of the PS distribution needed to evaluate integrands.
-  F.params = &params;
-
   if (n != NULL) {
+    // Function struct needed by GSL to integrate a function. We will use
+    // this for all functions and just set the `function` parameter
+    // appropriately (see below)
+    gsl_function F;
+    // Parameters of the PS distribution needed to evaluate integrands.
+    F.params = &params;
     // Set function to integrate:
     F.function = &ncdm_number_density_integrand;
+    double error;    // We will store the estimate integration errors here
     double lb = 0.0; // Lower bound of integration.
     // Perform integration:
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, n, &error);
     // Set the result and rescale. Need extra factor of 1/rescale since
     // n ~ T^3 and factor2 is for something that goes like T^4
-    *n = result * factor2 / rescale;
+    *n *= factor2 / rescale;
   }
   if (rho != NULL) {
+    gsl_function F;
+    F.params = &params;
     F.function = &ncdm_energy_density_integrand;
     double lb = 0.0;
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
-    *rho = result * factor2;
+    double error;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, rho, &error);
+    // printf("rho, factor2 = %e, %e\n", *rho, factor2);
+    *rho *= factor2;
   }
   if (p != NULL) {
+    gsl_function F;
+    F.params = &params;
     F.function = &ncdm_pressure_density_integrand;
     double lb = 0.0;
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
-    *p = result * factor2;
+    double error;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, p, &error);
+    *p *= factor2;
   }
   if (drho_dM != NULL) {
+    gsl_function F;
+    F.params = &params;
     F.function = &ncdm_energy_density_deriv_integrand;
     double lb = 0.0;
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
-    *drho_dM = result * factor2;
+    double error;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, drho_dM, &error);
+    *drho_dM *= factor2;
   }
   if (pseudo_p != NULL) {
+    gsl_function F;
+    F.params = &params;
     F.function = &ncdm_pseudo_pressure_density_integrand;
     double lb = 0.0;
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
-    *pseudo_p = result * factor2;
+    double error;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, pseudo_p, &error);
+    *pseudo_p *= factor2;
   }
+
+  gsl_integration_workspace_free(w);
 
   return _SUCCESS_;
 }
