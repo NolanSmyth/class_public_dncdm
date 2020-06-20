@@ -98,7 +98,11 @@
  *
  */
 
+// Comment this out to use CLASS's built-in PSD code
+#define CUSTOM_PSD
+
 #include "background.h"
+#include <gsl/gsl_integration.h>
 
 /**
  * Background quantities at given conformal time tau.
@@ -1836,6 +1840,125 @@ int background_dncdm_init(struct precision *ppr, struct background *pba) {
   return _SUCCESS_;
 }
 
+#ifdef CUSTOM_PSD
+
+struct NcdmPsDistParams {
+  // Mass of the NCDM scaled by the temperature.
+  double mass;
+  // Factor to rescale temperature based on redshift
+  double rescale;
+  // Chemical potential of the NCDM scaled by the temperature (default is 0.0)
+  double chemical_potential;
+};
+
+/**
+ * Compute the value of the non-cold-dark-matter phase space distribution
+ * at a given momentum `q` given the distribution parameters `params`.
+ * Currently, this distribution is the Fermi-Dirac distribution. We will want
+ * to modify this to our needs.
+ *
+ * @param q The magnitude of the three-momentum rescaled by temperature.
+ * @param params Parameters of the phase space distribution.
+ * @return Returns the value of f(q).
+ *
+ */
+double ncdm_ps_dist(double q, void *params) {
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+  double cp = fp->chemical_potential;
+  double m = fp->mass;
+  double rescale = fp->rescale;
+  double eng = sqrt(q * q + m * m / rescale / rescale);
+  return 1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0);
+}
+
+/**
+ * Returns the integrand of the NCDM number density integral, given by:
+ *	q^2 f(q)
+ *
+ * @param q The magnitude of the three-momentum.
+ * @param params Parameters of the phase space distribution.
+ * @return Returns the value of f(q).
+ *
+ */
+double ncdm_number_density_integrand(double q, void *params) {
+  double fq = ncdm_ps_dist(q, params);
+  return q * q * fq;
+}
+
+/**
+ * Returns the integrand of the NCDM energy density integral, given by:
+ *	E(q) q^2 f(q) = sqrt(q^2 + m^2) q^2 f(q)
+ *
+ * @param q The magnitude of the three-momentum.
+ * @param params Parameters of the phase space distribution.
+ * @return Returns the value of f(q).
+ *
+ */
+double ncdm_energy_density_integrand(double q, void *params) {
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+  double fq = ncdm_ps_dist(q, params);
+  double m = fp->mass;
+  double rescale = fp->rescale;
+  double eng = sqrt(q * q + m * m / rescale / rescale);
+  return eng * q * q * fq;
+}
+
+/**
+ * Returns the integrand of the NCDM pressure density integral, given by:
+ *	(q^2 / 3E(q)) q^2 f(q)
+ *
+ * @param q The magnitude of the three-momentum.
+ * @param params Parameters of the phase space distribution.
+ * @return Returns the value of f(q).
+ *
+ */
+double ncdm_pressure_density_integrand(double q, void *params) {
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+  double fq = ncdm_ps_dist(q, params);
+  double m = fp->mass;
+  double rescale = fp->rescale;
+  double eng = sqrt(q * q + m * m / rescale / rescale);
+  double q4 = q * q * q * q;
+  return q4 / (3.0 * eng) * fq;
+}
+
+/**
+ * Returns the integrand of the NCDM energy density derivative (w.r.t. m)
+ * integral, given by:
+ *	(q^2 / 3e(q)) q^2 f(q)
+ *
+ * @param q The magnitude of the three-momentum.
+ * @param params Parameters of the phase space distribution.
+ * @return Returns the value of f(q).
+ *
+ */
+double ncdm_energy_density_deriv_integrand(double q, void *params) {
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+  double fq = ncdm_ps_dist(q, params);
+  double m = fp->mass;
+  double rescale = fp->rescale;
+  double eng = sqrt(q * q + m * m / rescale / rescale);
+  return q * q * m / rescale / rescale * fq;
+}
+
+/**
+ * Returns the integrand of the NCDM pseudo pressure density integral, given by:
+ *	(q^2 / e)^3 / 3 * f(q)
+ *
+ * @param q The magnitude of the three-momentum.
+ * @param params Parameters of the phase space distribution.
+ * @return Returns the value of f(q).
+ *
+ */
+double ncdm_pseudo_pressure_density_integrand(double q, void *params) {
+  struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
+  double fq = ncdm_ps_dist(q, params);
+  double m = fp->mass;
+  double rescale = fp->rescale;
+  double eng = sqrt(q * q + m * m / rescale / rescale);
+  return pow(q * q / eng, 3.0) / 3.0 * fq;
+}
+
 /**
  * For a given ncdm species: given the quadrature weights, the mass
  * and the redshift, find background quantities by a quick weighted
@@ -1852,10 +1975,87 @@ int background_dncdm_init(struct precision *ppr, struct background *pba) {
  * @param rho      Output: energy density
  * @param p        Output: pressure
  * @param drho_dM  Output: derivative used in next function
- * @param pseudo_p Output: pseudo-pressure used in perturbation module for fluid
+ * @param pseudo_p Output: pseudo-pressure used in perturbation module for
+ fluid
  * approx
  *
  */
+int background_ncdm_momenta(
+    /* Only calculate for non-NULL pointers: */
+    double *qvec, double *wvec, int qsize, double M, double factor, double z,
+    double *n,
+    double *rho,     // density
+    double *p,       // pressure
+    double *drho_dM, // d rho / d M used in next function
+    double *pseudo_p // pseudo-p used in ncdm fluid approx
+) {
+  // This is what we need to modify to modify the temperature dependence as
+  // a function of redshift. I *think* that this factor is from the following
+  // relationship: T^then = (1 + z) * T^now
+  double rescale = 1.0 + z;
+  double factor2 = factor * pow(rescale, 4);
+
+  // Set the parameters
+  struct NcdmPsDistParams params = {rescale, M, 0.0};
+
+  // Parameters for integration:
+  double epsabs = 0.0;  // Absolute tolerance
+  double epsrel = 1e-5; // Relative tolerance
+  size_t limit = 1000;  // Number of refinements allowed by routine.
+
+  // Alloc memory for GSL's integration routine. We may want to allocate
+  // this elsewhere if it becomes too costly.
+  gsl_integration_workspace *w = gsl_integration_workspace_alloc(limit);
+
+  double result; // We will store integration results here
+  double error;  // We will store the estimate integration errors here
+  // Function struct needed by GSL to integrate a function. We will use
+  // this for all functions and just set the `function` parameter
+  // appropriately (see below)
+  gsl_function F;
+  // Parameters of the PS distribution needed to evaluate integrands.
+  F.params = &params;
+
+  if (n != NULL) {
+    // Set function to integrate:
+    F.function = &ncdm_number_density_integrand;
+    double lb = 0.0; // Lower bound of integration.
+    // Perform integration:
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+    // Set the result and rescale. Need extra factor of 1/rescale since
+    // n ~ T^3 and factor2 is for something that goes like T^4
+    *n = result * factor2 / rescale;
+  }
+  if (rho != NULL) {
+    F.function = &ncdm_energy_density_integrand;
+    double lb = 0.0;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+    *rho = result * factor2;
+  }
+  if (p != NULL) {
+    F.function = &ncdm_pressure_density_integrand;
+    double lb = 0.0;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+    *p = result * factor2;
+  }
+  if (drho_dM != NULL) {
+    F.function = &ncdm_energy_density_deriv_integrand;
+    double lb = 0.0;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+    *drho_dM = result * factor2;
+  }
+  if (pseudo_p != NULL) {
+    F.function = &ncdm_pseudo_pressure_density_integrand;
+    double lb = 0.0;
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &result, &error);
+    *pseudo_p = result * factor2;
+  }
+
+  return _SUCCESS_;
+}
+
+#else
+
 int background_ncdm_momenta(
     /* Only calculate for non-NULL pointers: */
     double *qvec, double *wvec, int qsize, double M, double factor, double z,
@@ -1870,11 +2070,15 @@ int background_ncdm_momenta(
   int index_q;
   double epsilon;
   double q2;
-  double factor2;
   /** Summary: */
 
   /** - rescale normalization at given redshift */
-  factor2 = factor * pow(1 + z, 4);
+  // LM: This appears to me to be: Tncdm^0 (1+z) = Tncdm. That is, to get the
+  // correct temperature, we take the NCDM temperature today and multiple by
+  // (1 + z) to get the temperature at redshift z. Or, equivalently:
+  // Tncdm^0 * a^0 = Tncdm * a (using 1+z = a^0/a)
+  double rescale = 1.0 + z;
+  double factor2 = factor * pow(rescale, 4);
 
   /** - initialize quantities */
   if (n != NULL)
@@ -1895,7 +2099,7 @@ int background_ncdm_momenta(
     q2 = qvec[index_q] * qvec[index_q];
 
     /* energy */
-    epsilon = sqrt(q2 + M * M / (1. + z) / (1. + z));
+    epsilon = sqrt(q2 + M * M / rescale);
 
     /* integrand of the various quantities */
     if (n != NULL)
@@ -1905,7 +2109,7 @@ int background_ncdm_momenta(
     if (p != NULL)
       *p += q2 * q2 / 3. / epsilon * wvec[index_q];
     if (drho_dM != NULL)
-      *drho_dM += q2 * M / (1. + z) / (1. + z) / epsilon * wvec[index_q];
+      *drho_dM += q2 * M / rescale / epsilon * wvec[index_q];
     if (pseudo_p != NULL)
       *pseudo_p += pow(q2 / epsilon, 3) / 3.0 * wvec[index_q];
   }
@@ -1925,74 +2129,7 @@ int background_ncdm_momenta(
   return _SUCCESS_;
 }
 
-int background_ncdm_momenta2(
-    /* Only calculate for non-NULL pointers: */
-    double *qvec, double *wvec, int qsize, double M, double factor, double z,
-    double *n,
-    double *rho,     // density
-    double *p,       // pressure
-    double *drho_dM, // d rho / d M used in next function
-    double *pseudo_p // pseudo-p used in ncdm fluid approx
-) {
-
-  // int_a^b f(x) dx = sum_i w_i f(x_i)
-  int index_q;
-  double epsilon;
-  double q2;
-  double factor2;
-  /** Summary: */
-
-  /** - rescale normalization at given redshift */
-  factor2 = factor * pow(1 + z, 4);
-
-  /** - initialize quantities */
-  if (n != NULL)
-    *n = 0.;
-  if (rho != NULL)
-    *rho = 0.;
-  if (p != NULL)
-    *p = 0.;
-  if (drho_dM != NULL)
-    *drho_dM = 0.;
-  if (pseudo_p != NULL)
-    *pseudo_p = 0.;
-
-  /** - loop over momenta */
-  for (index_q = 0; index_q < qsize; index_q++) {
-
-    /* squared momentum */
-    q2 = qvec[index_q] * qvec[index_q];
-
-    /* energy */
-    epsilon = sqrt(q2 + M * M / (1. + z) / (1. + z));
-
-    /* integrand of the various quantities */
-    if (n != NULL)
-      *n += q2 * wvec[index_q];
-    if (rho != NULL)
-      *rho += q2 * epsilon * wvec[index_q];
-    if (p != NULL)
-      *p += q2 * q2 / 3. / epsilon * wvec[index_q];
-    if (drho_dM != NULL)
-      *drho_dM += q2 * M / (1. + z) / (1. + z) / epsilon * wvec[index_q];
-    if (pseudo_p != NULL)
-      *pseudo_p += pow(q2 / epsilon, 3) / 3.0 * wvec[index_q];
-  }
-
-  /** - adjust normalization */
-  if (n != NULL)
-    *n *= factor2 / (1. + z);
-  if (rho != NULL)
-    *rho *= factor2;
-  if (p != NULL)
-    *p *= factor2;
-  if (drho_dM != NULL)
-    *drho_dM *= factor2;
-  if (pseudo_p != NULL)
-    *pseudo_p *= factor2;
-  // printf(" -> z, n, rho, p = %e, %e\n",z,*rho);
-  return _SUCCESS_;
-}
+#endif
 
 /**
  * For a given decaying ncdm species: given the quadrature weights, the mass

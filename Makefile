@@ -44,7 +44,7 @@ OPTFLAG = -O3 -ffast-math #-march=native
 
 # all other compilation flags
 CCFLAG = -g -fPIC
-LDFLAG = -g -fPIC
+LDFLAG = -g -fPIC -lgsl -lgslcblas 
 
 # leave blank to compile without HyRec, or put path to HyRec directory
 # (with no slash at the end: e.g. hyrec or ../hyrec)
