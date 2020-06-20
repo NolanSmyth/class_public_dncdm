@@ -1996,11 +1996,11 @@ int background_ncdm_momenta(
   double factor2 = factor * pow(rescale, 4);
 
   // Set the parameters
-  struct NcdmPsDistParams params = {rescale, M, 0.0};
+  struct NcdmPsDistParams params = {M, rescale, 0.0};
 
   // Parameters for integration:
-  double epsabs = 0.0;  // Absolute tolerance
-  double epsrel = 1e-5; // Relative tolerance
+  double epsabs = 1e-8; // Absolute tolerance
+  double epsrel = 1e-8; // Relative tolerance
   size_t limit = 1000;  // Number of refinements allowed by routine.
 
   // Alloc memory for GSL's integration routine. We may want to allocate
