@@ -1864,8 +1864,9 @@ struct NcdmPsDistParams {
  *
  */
 inline double ncdm_ps_dist(double eng, double cp) {
-  return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
-         pow(2.0 * _PI_, 3.0);
+  // return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
+  //        pow(2.0 * _PI_, 3.0);
+  return (exp(-eng));
 }
 
 /**
@@ -2007,7 +2008,8 @@ int background_ncdm_momenta(
   // This is what we need to modify to modify the temperature dependence as
   // a function of redshift. I *think* that this factor is from the following
   // relationship: T^then = (1 + z) * T^now
-  double rescale = 1.0 + z;
+  // double rescale = 1.0 + z;
+  double rescale = 1.0 + pow(z,2);
   double factor2 = factor * pow(rescale, 4);
 
   // Set the parameters
@@ -2104,7 +2106,8 @@ int background_ncdm_momenta(
   // correct temperature, we take the NCDM temperature today and multiple by
   // (1 + z) to get the temperature at redshift z. Or, equivalently:
   // Tncdm^0 * a^0 = Tncdm * a (using 1+z = a^0/a)
-  double rescale = 1.0 + z;
+  double rescale = 1.0 + pow(z,2);
+  // double rescale = 1.0 + z;
   double factor2 = factor * pow(rescale, 4);
 
   /** - initialize quantities */

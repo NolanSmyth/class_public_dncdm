@@ -42,8 +42,7 @@ setup(
     ext_modules=[Extension("classy", [os.path.join(classy_folder, "classy.pyx")],
                            include_dirs=[nm.get_include(), include_folder],
                            libraries=liblist,
-                           library_dirs=[root_folder, GCCPATH],
-                           extra_link_args=['-lgomp'],
+                           library_dirs=[root_folder, GCCPATH]
                            )],
     #data_files=[('bbn', ['../bbn/sBBN.dat'])]
 )
