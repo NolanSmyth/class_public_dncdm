@@ -1863,10 +1863,16 @@ struct NcdmPsDistParams {
  * @return Returns the value of f(E).
  *
  */
-inline double ncdm_ps_dist(double eng, double cp) {
+inline double ncdm_ps_dist(double k, double eng, double cp) {
   // return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
   //        pow(2.0 * _PI_, 3.0);
   return exp(-eng)/pow(2.0 * _PI_, 3.0);
+}
+
+inline double ncdm_ps_dist_nr(double q, double M) {
+  // return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
+  //        pow(2.0 * _PI_, 3.0);
+  return exp(-q * q / (2.0 * M)) / (2.0 * _PI_ * _PI_ * _PI_);
 }
 
 /**
@@ -1877,9 +1883,14 @@ inline double ncdm_ps_dist(double eng, double cp) {
  * @param rescale Scaling factor to get current temperature
  */
 inline double ncdm_eng(double q, double m, double rescale) {
+<<<<<<< HEAD
   // return sqrt(q * q + m * m / rescale / rescale);
   return q * q / 2 / m /rescale;
   //NS: Check this rescaling again
+=======
+  // E/T = q*q/(2*m)
+  return sqrt(q * q + m * m / rescale / rescale);
+>>>>>>> c63d84ce65dfe471b5f1b4fded74a8a14846b03b
 }
 
 /**
@@ -1895,7 +1906,7 @@ double ncdm_number_density_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
   double eng = ncdm_eng(q, fp->mass, fp->rescale);
-  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+  double fq = ncdm_ps_dist_nr(q, fp->mass);
 
   return q * q * fq;
 }
@@ -1913,8 +1924,13 @@ double ncdm_number_density_integrand(double q, void *params) {
 double ncdm_energy_density_integrand(double M, double n, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
+<<<<<<< HEAD
   // double eng = ncdm_eng(q, fp->mass, fp->rescale);
   // double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+=======
+  double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  double fq = ncdm_ps_dist_nr(q, fp->mass);
+>>>>>>> c63d84ce65dfe471b5f1b4fded74a8a14846b03b
   // printf("eng, fq, q, eng*q^2 *fq, m, rescale = %e, %e, %e, %e, %e,%e\n",
   // eng,
   //       fq, q, eng * q * q * fq, fp->mass, fp->rescale);
@@ -1936,7 +1952,7 @@ double ncdm_pressure_density_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
   double eng = ncdm_eng(q, fp->mass, fp->rescale);
-  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+  double fq = ncdm_ps_dist_nr(q, fp->mass);
 
   return q * q * q * q / (3.0 * eng) * fq;
 }
@@ -1955,7 +1971,7 @@ double ncdm_energy_density_deriv_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
   double eng = ncdm_eng(q, fp->mass, fp->rescale);
-  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+  double fq = ncdm_ps_dist_nr(q, fp->mass);
 
   return q * q * fp->mass / fp->rescale / eng * fq;
 }
@@ -1973,7 +1989,7 @@ double ncdm_pseudo_pressure_density_integrand(double q, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
   double eng = ncdm_eng(q, fp->mass, fp->rescale);
-  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+  double fq = ncdm_ps_dist_nr(q, fp->mass);
 
   return pow(q * q / eng, 3.0) / 3.0 * fq;
 }
@@ -2017,7 +2033,6 @@ int background_ncdm_momenta(
   double factor2 = factor * pow(rescale, 4);
   printf("recale, factor = %e, %e", rescale, factor);
   printf("\n");
-  
 
   // Set the parameters
   struct NcdmPsDistParams params = {M, rescale, 0.0};
@@ -2055,8 +2070,9 @@ int background_ncdm_momenta(
     double error;
     printf("HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
     gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, rho, &error);
-    // printf("rho, factor2 = %e, %e\n", *rho, factor2);
+    printf("rho, factor2 = %e, %e\n", *rho, factor2);
     *rho *= factor2;
+    printf("rho = %e\n", *rho);
   }
   if (p != NULL) {
     gsl_function F;
@@ -2115,7 +2131,11 @@ int background_ncdm_momenta(
   // correct temperature, we take the NCDM temperature today and multiple by
   // (1 + z) to get the temperature at redshift z. Or, equivalently:
   // Tncdm^0 * a^0 = Tncdm * a (using 1+z = a^0/a)
+<<<<<<< HEAD
   double rescale = 1.0 + z
+=======
+  double rescale = 1.0 + pow(z, 2);
+>>>>>>> c63d84ce65dfe471b5f1b4fded74a8a14846b03b
   // double rescale = 1.0 + z;
   double factor2 = factor * pow(rescale, 4);
 
