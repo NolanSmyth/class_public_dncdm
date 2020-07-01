@@ -1883,14 +1883,12 @@ inline double ncdm_ps_dist_nr(double q, double M) {
  * @param rescale Scaling factor to get current temperature
  */
 inline double ncdm_eng(double q, double m, double rescale) {
-<<<<<<< HEAD
   // return sqrt(q * q + m * m / rescale / rescale);
   return q * q / 2 / m /rescale;
   //NS: Check this rescaling again
-=======
   // E/T = q*q/(2*m)
-  return sqrt(q * q + m * m / rescale / rescale);
->>>>>>> c63d84ce65dfe471b5f1b4fded74a8a14846b03b
+  // return sqrt(q * q + m * m / rescale / rescale);
+
 }
 
 /**
@@ -1924,13 +1922,11 @@ double ncdm_number_density_integrand(double q, void *params) {
 double ncdm_energy_density_integrand(double M, double n, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
-<<<<<<< HEAD
   // double eng = ncdm_eng(q, fp->mass, fp->rescale);
   // double fq = ncdm_ps_dist(eng, fp->chemical_potential);
-=======
-  double eng = ncdm_eng(q, fp->mass, fp->rescale);
-  double fq = ncdm_ps_dist_nr(q, fp->mass);
->>>>>>> c63d84ce65dfe471b5f1b4fded74a8a14846b03b
+
+  // double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  // double fq = ncdm_ps_dist_nr(q, fp->mass);
   // printf("eng, fq, q, eng*q^2 *fq, m, rescale = %e, %e, %e, %e, %e,%e\n",
   // eng,
   //       fq, q, eng * q * q * fq, fp->mass, fp->rescale);
@@ -2131,11 +2127,8 @@ int background_ncdm_momenta(
   // correct temperature, we take the NCDM temperature today and multiple by
   // (1 + z) to get the temperature at redshift z. Or, equivalently:
   // Tncdm^0 * a^0 = Tncdm * a (using 1+z = a^0/a)
-<<<<<<< HEAD
+
   double rescale = 1.0 + z
-=======
-  double rescale = 1.0 + pow(z, 2);
->>>>>>> c63d84ce65dfe471b5f1b4fded74a8a14846b03b
   // double rescale = 1.0 + z;
   double factor2 = factor * pow(rescale, 4);
 
