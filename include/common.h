@@ -7,6 +7,7 @@
 #include "float.h"
 #include "svnversion.h"
 #include <stdarg.h>
+#include <gsl/gsl_integration.h>
 
 #ifdef _OPENMP
 #include "omp.h"

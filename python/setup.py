@@ -13,7 +13,7 @@ GCCPATH_STRING = sbp.Popen(
     stdout=sbp.PIPE).communicate()[0]
 GCCPATH = osp.normpath(osp.dirname(GCCPATH_STRING)).decode()
 
-liblist = ["class"]
+liblist = ["class","gsl","gslcblas"]
 MVEC_STRING = sbp.Popen(
     ['gcc', '-lmvec'],
     stderr=sbp.PIPE).communicate()[1]
@@ -42,7 +42,7 @@ setup(
     ext_modules=[Extension("classy", [os.path.join(classy_folder, "classy.pyx")],
                            include_dirs=[nm.get_include(), include_folder],
                            libraries=liblist,
-                           library_dirs=[root_folder, GCCPATH]
+                           library_dirs=[root_folder, GCCPATH, os.path.join("usr","local","lib")]
                            )],
     #data_files=[('bbn', ['../bbn/sBBN.dat'])]
 )

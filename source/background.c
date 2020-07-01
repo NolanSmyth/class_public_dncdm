@@ -1866,7 +1866,7 @@ struct NcdmPsDistParams {
 inline double ncdm_ps_dist(double eng, double cp) {
   // return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
   //        pow(2.0 * _PI_, 3.0);
-  return (exp(-eng));
+  return exp(-eng)/pow(2.0 * _PI_, 3.0);
 }
 
 /**
@@ -1877,7 +1877,9 @@ inline double ncdm_ps_dist(double eng, double cp) {
  * @param rescale Scaling factor to get current temperature
  */
 inline double ncdm_eng(double q, double m, double rescale) {
-  return sqrt(q * q + m * m / rescale / rescale);
+  // return sqrt(q * q + m * m / rescale / rescale);
+  return q * q / 2 / m /rescale;
+  //NS: Check this rescaling again
 }
 
 /**
@@ -1907,16 +1909,18 @@ double ncdm_number_density_integrand(double q, void *params) {
  * @return Returns the value of f(q).
  *
  */
-double ncdm_energy_density_integrand(double q, void *params) {
+// double ncdm_energy_density_integrand(double q, void *params) {
+double ncdm_energy_density_integrand(double M, double n, void *params) {
   struct NcdmPsDistParams *fp = (struct NcdmPsDistParams *)params;
 
-  double eng = ncdm_eng(q, fp->mass, fp->rescale);
-  double fq = ncdm_ps_dist(eng, fp->chemical_potential);
+  // double eng = ncdm_eng(q, fp->mass, fp->rescale);
+  // double fq = ncdm_ps_dist(eng, fp->chemical_potential);
   // printf("eng, fq, q, eng*q^2 *fq, m, rescale = %e, %e, %e, %e, %e,%e\n",
   // eng,
   //       fq, q, eng * q * q * fq, fp->mass, fp->rescale);
 
-  return eng * q * q * fq;
+  // return eng * q * q * fq;
+  return n*M;
 }
 
 /**
@@ -2008,9 +2012,12 @@ int background_ncdm_momenta(
   // This is what we need to modify to modify the temperature dependence as
   // a function of redshift. I *think* that this factor is from the following
   // relationship: T^then = (1 + z) * T^now
-  // double rescale = 1.0 + z;
-  double rescale = 1.0 + pow(z,2);
+
+  double rescale = 1.0 + z;
   double factor2 = factor * pow(rescale, 4);
+  printf("recale, factor = %e, %e", rescale, factor);
+  printf("\n");
+  
 
   // Set the parameters
   struct NcdmPsDistParams params = {M, rescale, 0.0};
@@ -2035,7 +2042,7 @@ int background_ncdm_momenta(
     double error;    // We will store the estimate integration errors here
     double lb = 0.0; // Lower bound of integration.
     // Perform integration:
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, n, &error);
+       gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, n, &error);
     // Set the result and rescale. Need extra factor of 1/rescale since
     // n ~ T^3 and factor2 is for something that goes like T^4
     *n *= factor2 / rescale;
@@ -2046,6 +2053,7 @@ int background_ncdm_momenta(
     F.function = &ncdm_energy_density_integrand;
     double lb = 0.0;
     double error;
+    printf("HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
     gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, rho, &error);
     // printf("rho, factor2 = %e, %e\n", *rho, factor2);
     *rho *= factor2;
@@ -2085,6 +2093,7 @@ int background_ncdm_momenta(
 
 #else
 
+// NS:It doesn't seem to ever use this version of the function
 int background_ncdm_momenta(
     /* Only calculate for non-NULL pointers: */
     double *qvec, double *wvec, int qsize, double M, double factor, double z,
@@ -2106,7 +2115,7 @@ int background_ncdm_momenta(
   // correct temperature, we take the NCDM temperature today and multiple by
   // (1 + z) to get the temperature at redshift z. Or, equivalently:
   // Tncdm^0 * a^0 = Tncdm * a (using 1+z = a^0/a)
-  double rescale = 1.0 + pow(z,2);
+  double rescale = 1.0 + z
   // double rescale = 1.0 + z;
   double factor2 = factor * pow(rescale, 4);
 
