@@ -1866,7 +1866,7 @@ struct NcdmPsDistParams {
 inline double ncdm_ps_dist(double k, double eng, double cp) {
   // return (1.0 / (exp(eng - cp) + 1.0) + 1.0 / (exp(eng + cp) + 1.0)) /
   //        pow(2.0 * _PI_, 3.0);
-  return exp(-eng)/pow(2.0 * _PI_, 3.0);
+  return exp(-eng) / pow(2.0 * _PI_, 3.0);
 }
 
 inline double ncdm_ps_dist_nr(double q, double M) {
@@ -1882,13 +1882,12 @@ inline double ncdm_ps_dist_nr(double q, double M) {
  * @param m Scaled NCDM mass
  * @param rescale Scaling factor to get current temperature
  */
-inline double ncdm_eng(double q, double m, double rescale) {
+inline double ncdm_eng(double q, double M, double rescale) {
   // return sqrt(q * q + m * m / rescale / rescale);
-  return q * q / 2 / m /rescale;
-  //NS: Check this rescaling again
+  return q * q / 2 / (M / rescale);
+  // NS: Check this rescaling again
   // E/T = q*q/(2*m)
   // return sqrt(q * q + m * m / rescale / rescale);
-
 }
 
 /**
@@ -1932,7 +1931,7 @@ double ncdm_energy_density_integrand(double M, double n, void *params) {
   //       fq, q, eng * q * q * fq, fp->mass, fp->rescale);
 
   // return eng * q * q * fq;
-  return n*M;
+  return n * M;
 }
 
 /**
@@ -2028,6 +2027,7 @@ int background_ncdm_momenta(
   double rescale = 1.0 + z;
   double factor2 = factor * pow(rescale, 4);
   printf("recale, factor = %e, %e", rescale, factor);
+  printf("mass is = %e", M);
   printf("\n");
 
   // Set the parameters
@@ -2052,8 +2052,8 @@ int background_ncdm_momenta(
     F.function = &ncdm_number_density_integrand;
     double error;    // We will store the estimate integration errors here
     double lb = 0.0; // Lower bound of integration.
-    // Perform integration:
-       gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, n, &error);
+                     // Perform integration:
+    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, n, &error);
     // Set the result and rescale. Need extra factor of 1/rescale since
     // n ~ T^3 and factor2 is for something that goes like T^4
     *n *= factor2 / rescale;
@@ -2065,10 +2065,17 @@ int background_ncdm_momenta(
     double lb = 0.0;
     double error;
     printf("HERE $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
-    gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, rho, &error);
+    // gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, rho, &error);
+    if (n == NULL) {
+      F.params = &params;
+      F.function = &ncdm_number_density_integrand;
+      double nn = 0.0;
+      gsl_integration_qagiu(&F, lb, epsabs, epsrel, limit, w, &nn, &error);
+      *rho *= (nn * factor2 / rescale) * (M / rescale);
+    } else {
+      *rho *= *n * M / rescale;
+    }
     printf("rho, factor2 = %e, %e\n", *rho, factor2);
-    *rho *= factor2;
-    printf("rho = %e\n", *rho);
   }
   if (p != NULL) {
     gsl_function F;
@@ -2129,8 +2136,8 @@ int background_ncdm_momenta(
   // Tncdm^0 * a^0 = Tncdm * a (using 1+z = a^0/a)
 
   double rescale = 1.0 + z
-  // double rescale = 1.0 + z;
-  double factor2 = factor * pow(rescale, 4);
+                   // double rescale = 1.0 + z;
+                   double factor2 = factor * pow(rescale, 4);
 
   /** - initialize quantities */
   if (n != NULL)
